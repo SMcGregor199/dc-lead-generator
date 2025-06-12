@@ -11,7 +11,7 @@ from datetime import datetime
 import sys
 import traceback
 import pytz
-from news_fetcher import get_daily_news_insight
+from news_fetcher_improved import get_daily_news_insight, get_fallback_news_content
 
 
 def load_credentials():
@@ -21,15 +21,20 @@ def load_credentials():
     Returns:
         tuple: (gmail_address, app_password) or (None, None) if not found
     """
-    gmail_address = os.getenv('GMAIL_ADDRESS')
-    app_password = os.getenv('GMAIL_APP_PASSWORD')
+    gmail_address = os.environ.get('GMAIL_ADDRESS')
+    app_password = os.environ.get('GMAIL_APP_PASSWORD')
 
     if not gmail_address:
-        print("ERROR: GMAIL_ADDRESS not found in Replit Secrets")
+        print("ERROR: GMAIL_ADDRESS not found in environment variables")
         return None, None
 
     if not app_password:
-        print("ERROR: GMAIL_APP_PASSWORD not found in Replit Secrets")
+        print("ERROR: GMAIL_APP_PASSWORD not found in environment variables")
+        return None, None
+
+    # Verify credentials are properly formatted (basic validation)
+    if '@' not in gmail_address or len(app_password) < 10:
+        print("ERROR: Invalid credential format detected")
         return None, None
 
     return gmail_address, app_password
@@ -59,30 +64,28 @@ def create_morning_email(sender_email, recipient_email):
     msg['From'] = sender_email
     msg['To'] = recipient_email
 
-    # Get daily news insight
+    # Get daily news insight with fallback
     print("Fetching daily news insight...")
     news_insight = get_daily_news_insight()
     
+    # Use fallback if primary news fetching fails
+    if not news_insight:
+        print("Primary news fetching failed, using fallback content")
+        news_insight = get_fallback_news_content()
+    
     # Create news section
-    if news_insight:
-        news_section = f"""
+    news_section = f"""
 📡 Campus Insight of the Day
 
 {news_insight['title']}
 
-{news_insight['summary']}
-
-Read more: {news_insight['url']}
-Source: {news_insight['source']}
-
-"""
-    else:
-        news_section = """
-📡 Campus Insight of the Day
-
-Unable to fetch today's higher education news. Please check back later for your daily campus insight.
-
-"""
+{news_insight['summary']}"""
+    
+    # Only add URL if it exists (fallback content has empty URL)
+    if news_insight['url']:
+        news_section += f"\n\nRead more: {news_insight['url']}"
+    
+    news_section += f"\nSource: {news_insight['source']}\n\n"
 
     # Create email body with current date, time, and news
     email_body = f"""Good Morning! 🌞
@@ -126,10 +129,13 @@ def send_email(gmail_address, app_password, recipient_email):
 
         # Create email message
         msg = create_morning_email(gmail_address, recipient_email)
+        if not msg:
+            print("❌ Failed to create email message")
+            return False
 
-        # Connect to Gmail SMTP server
+        # Connect to Gmail SMTP server with timeout
         print("Connecting to Gmail SMTP server...")
-        with smtplib.SMTP_SSL('smtp.gmail.com', 465) as server:
+        with smtplib.SMTP_SSL('smtp.gmail.com', 465, timeout=30) as server:
             print("Logging in to Gmail...")
             server.login(gmail_address, app_password)
 
@@ -141,12 +147,18 @@ def send_email(gmail_address, app_password, recipient_email):
 
     except smtplib.SMTPAuthenticationError as e:
         print(f"❌ SMTP Authentication Error: {e}")
-        print(
-            "Please check your Gmail address and app password in Replit Secrets."
-        )
-        print(
-            "Make sure you're using an App Password, not your regular Gmail password."
-        )
+        print("Please verify Gmail credentials in environment variables.")
+        print("Ensure you're using an App Password, not regular Gmail password.")
+        return False
+
+    except smtplib.SMTPRecipientsRefused as e:
+        print(f"❌ Recipients refused: {e}")
+        print("Please verify the recipient email address is valid.")
+        return False
+
+    except smtplib.SMTPServerDisconnected as e:
+        print(f"❌ SMTP server disconnected: {e}")
+        print("Network connectivity issue - will retry on next run.")
         return False
 
     except smtplib.SMTPException as e:
