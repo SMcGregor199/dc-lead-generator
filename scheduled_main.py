@@ -13,6 +13,7 @@ import traceback
 import schedule
 import time as time_module
 import pytz
+from news_fetcher import get_daily_news_insight
 
 def load_credentials():
     """
@@ -58,7 +59,32 @@ def create_morning_email(sender_email, recipient_email):
     msg['From'] = sender_email
     msg['To'] = recipient_email
     
-    # Create email body with current date and time
+    # Get daily news insight
+    print("Fetching daily news insight...")
+    news_insight = get_daily_news_insight()
+    
+    # Create news section
+    if news_insight:
+        news_section = f"""
+📡 Campus Insight of the Day
+
+{news_insight['title']}
+
+{news_insight['summary']}
+
+Read more: {news_insight['url']}
+Source: {news_insight['source']}
+
+"""
+    else:
+        news_section = """
+📡 Campus Insight of the Day
+
+Unable to fetch today's higher education news. Please check back later for your daily campus insight.
+
+"""
+
+    # Create email body with current date, time, and news
     email_body = f"""Good Morning! 🌞
 
 Hope you're having a wonderful start to your day!
@@ -67,7 +93,7 @@ Hope you're having a wonderful start to your day!
 🕐 Current Time: {current_time}
 
 This is your automated morning greeting from Campus Whisperer.
-
+{news_section}
 Have a productive and amazing day ahead! 💪
 
 Best regards,
