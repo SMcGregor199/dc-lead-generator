@@ -29,9 +29,9 @@ RSS_FEEDS = [
         'description': 'Technology in higher education'
     },
     {
-        'name': 'Chronicle of Higher Education',
-        'url': 'https://www.chronicle.com/section/news/10/rss',
-        'description': 'Academic news and commentary'
+        'name': 'Higher Ed Dive',
+        'url': 'https://feeds.feedburner.com/HigherEducationDive',
+        'description': 'Higher education industry news'
     }
 ]
 
