@@ -53,7 +53,7 @@ def create_morning_email(sender_email, recipient_email):
     msg['Subject'] = "🌅 Good Morning – From Campus Whisperer"
     msg['From'] = sender_email
     msg['To'] = recipient_email
-    msg['Cc'] = 'smcgregor@maryu.marywood.edu'
+    msg['Cc'] = 'smcgregor@maryu.marywood.edu, jasmine.n.olivier@gmail.com'
     
     # Get daily tech news insight with fallback
     print("Fetching daily tech news insight...")
