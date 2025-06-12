@@ -77,5 +77,59 @@ To schedule the script to run automatically every morning at 7:00 AM:
 
 ### Step 5: Add Internal Scheduling (Recommended Approach)
 
-For better reliability, modify main.py to include scheduling logic:
+For better reliability, use the `scheduled_main.py` file which includes built-in scheduling:
+
+```bash
+python scheduled_main.py
+```
+
+This version will:
+- Run continuously in the background
+- Automatically send emails at 7:00 AM daily
+- Provide status updates and error handling
+- Restart automatically if there are issues
+
+### Step 6: Enable Always On (Important)
+
+For 24/7 operation on Replit:
+
+1. Go to your Replit project settings
+2. Enable "Always On" feature (requires Replit subscription)
+3. Your email service will run continuously even when you close the browser
+
+### Step 7: Deploy to Production
+
+Once tested, you can deploy this to run continuously:
+
+1. **Current Status**: The scheduled service is now running
+2. **Next Email**: Will be sent tomorrow at 7:00 AM
+3. **Monitoring**: Check the console logs for status updates
+
+## Files Explained
+
+- `main.py` - Single-run version for testing
+- `scheduled_main.py` - Continuous service with built-in 7:00 AM scheduling
+- `README.md` - This setup guide
+
+## Troubleshooting
+
+### Common Issues:
+
+1. **Authentication Error**: Verify your Gmail App Password is correct
+2. **Email Not Received**: Check spam folder, verify recipient address
+3. **Service Stopped**: Restart the workflow or enable Replit Always On
+4. **Time Zone Issues**: The script uses server time (UTC) - adjust schedule if needed
+
+### Checking Logs:
+
+Monitor the workflow console for:
+- ✅ Successful email sends
+- ❌ Error messages
+- ⏰ Status updates
+
+## Security Notes
+
+- Gmail credentials are stored securely in Replit Secrets
+- App passwords are used instead of regular passwords for enhanced security
+- No sensitive information is logged or displayed
    
