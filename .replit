@@ -1,0 +1,39 @@
+modules = ["python-3.11"]
+
+[nix]
+channel = "stable-24_05"
+
+[workflows]
+runButton = "Project"
+
+[[workflows.workflow]]
+name = "Project"
+mode = "parallel"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "Email Automation"
+
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "email_automation_test"
+
+[[workflows.workflow]]
+name = "Email Automation"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "python main.py"
+
+[[workflows.workflow]]
+name = "email_automation_test"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "python main.py"
+
+[deployment]
+run = ["sh", "-c", "python main.py"]
