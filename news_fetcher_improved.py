@@ -17,6 +17,7 @@ from openai import OpenAI
 from urllib.parse import urlparse
 
 # Higher Ed news RSS feeds
+# Higher Ed news RSS feeds
 RSS_FEEDS = [
     {
         'name': 'Inside Higher Ed',
@@ -25,15 +26,57 @@ RSS_FEEDS = [
     },
     {
         'name': 'EdTech Magazine Higher Ed',
-        'url': 'https://edtechmagazine.com/higher/rss.xml',
+        'url': 'https://feeds.feedburner.com/EdTechHiEd',
         'description': 'Technology in higher education'
     },
     {
         'name': 'Higher Ed Dive',
-        'url': 'https://feeds.feedburner.com/HigherEducationDive',
-        'description': 'Higher education industry news'
+        'url': 'https://www.highereddive.com/feeds/news/',
+        'description': 'Higher ed policy, tech, enrollment news'
+    },
+    {
+        'name': 'HigherEdJobs Career News',
+        'url': 'https://www.higheredjobs.com/rss/articleFeed.cfm',
+        'description': 'Career and employment news in higher education'
+    },
+    {
+        'name': 'WENR – World Education News & Reviews',
+        'url': 'https://wenr.wes.org/feed',
+        'description': 'International higher education news & analysis'
+    },
+    {
+        'name': 'Faculty Focus',
+        'url': 'https://www.facultyfocus.com/feed/',
+        'description': 'Teaching strategies & trends in higher ed'
+    },
+    {
+        'name': 'The PIE News',
+        'url': 'https://thepienews.com/feed/',
+        'description': 'Global news on international education'
+    },
+    {
+        'name': 'Ruffalo Noel Levitz (RNL) Blog',
+        'url': 'https://www.ruffalonl.com/blog/feed/',
+        'description': 'Enrollment, retention, and fundraising trends'
+    },
+    {
+        'name': 'Top Hat Blog',
+        'url': 'https://tophat.com/blog/feed/',
+        'description': 'EdTech insights and teaching trends'
+    },
+    {
+        'name': 'Educause',
+        'url':'https://er.educause.edu/rss',
+        'description':'EDUCAUSE is a nonprofit association whose mission is to advance higher education through the use of information technology'
+
+    },
+    {
+        'name':'The Guardian | Higher Education',
+        'url':'https://www.theguardian.com/education/higher-education/rss',
+        'description':'The Guardian is a British daily newspaper and media organisation. It is the most widely read newspaper in the UK and the world\'s oldest English-language daily newspaper still in publication.'
     }
 ]
+
 
 # Configuration constants
 MAX_CONTENT_LENGTH = 4000  # Maximum content length for OpenAI
