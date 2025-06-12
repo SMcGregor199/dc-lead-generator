@@ -15,6 +15,7 @@ from email.message import EmailMessage
 from datetime import datetime
 import pytz
 from news_service import get_daily_news_insight, get_fallback_news_content
+from job_service import get_featured_job_posting
 
 
 def load_credentials():

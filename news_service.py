@@ -21,38 +21,61 @@ RSS_FEEDS = [
     {
         'name': 'Inside Higher Ed',
         'url': 'https://www.insidehighered.com/rss.xml',
-        'description': 'Leading source for higher education news'
+        'description': 'Leading source for higher education news',
+        'tech_focused': False
+    },
+    {
+        'name': 'Educause',
+        'url': 'https://er.educause.edu/channels/rss',
+        'description': 'Higher education technology news',
+        'tech_focused': True
     },
     {
         'name': 'EdTech Magazine Higher Ed',
         'url': 'https://edtechmagazine.com/higher/rss.xml',
-        'description': 'Technology in higher education'
+        'description': 'Technology in higher education',
+        'tech_focused': True
     },
     {
         'name': 'Higher Ed Dive',
         'url': 'https://feeds.feedburner.com/HigherEducationDive',
-        'description': 'Higher education industry news'
+        'description': 'Higher education industry news',
+        'tech_focused': False
     },
     {
         'name': 'Faculty Focus',
         'url': 'https://www.facultyfocus.com/feed/',
-        'description': 'Teaching strategies & trends in higher ed'
+        'description': 'Teaching strategies & trends in higher ed',
+        'tech_focused': False
     },
     {
         'name': 'The PIE News',
         'url': 'https://thepienews.com/feed/',
-        'description': 'Global news on international education'
+        'description': 'Global news on international education',
+        'tech_focused': False
     },
     {
         'name': 'Ruffalo Noel Levitz (RNL) Blog',
         'url': 'https://www.ruffalonl.com/blog/feed/',
-        'description': 'Enrollment, retention, and fundraising trends'
+        'description': 'Enrollment, retention, and fundraising trends',
+        'tech_focused': False
     },
     {
         'name': 'The Guardian Higher Education',
         'url': 'https://www.theguardian.com/education/higher-education/rss',
-        'description': 'Higher education news from The Guardian'
+        'description': 'Higher education news from The Guardian',
+        'tech_focused': False
     }
+]
+
+# Technology keywords for filtering non-tech-focused feeds
+TECH_KEYWORDS = [
+    'cybersecurity', 'data', 'AI', 'artificial intelligence', 'technology', 'IT', 
+    'digital', 'infrastructure', 'CIO', 'ERP', 'LMS', 'SIS', 'software', 
+    'innovation', 'modernization', 'IT strategy', 'cloud', 'analytics', 
+    'machine learning', 'automation', 'platform', 'system', 'database',
+    'security', 'network', 'tech', 'technological', 'computing', 'virtual',
+    'online learning', 'e-learning', 'edtech', 'learning management'
 ]
 
 
@@ -121,6 +144,29 @@ def validate_url(url):
     except requests.exceptions.RequestException as e:
         print(f"URL validation failed for {url}: {e}")
         return False
+
+
+def is_tech_related(title, description="", content=""):
+    """
+    Check if an article is technology-related based on keywords.
+    
+    Args:
+        title (str): Article title
+        description (str): Article description/summary
+        content (str): Article content
+    
+    Returns:
+        bool: True if article contains tech keywords, False otherwise
+    """
+    # Combine all text and convert to lowercase
+    full_text = f"{title} {description} {content}".lower()
+    
+    # Check if any tech keywords are present
+    for keyword in TECH_KEYWORDS:
+        if keyword.lower() in full_text:
+            return True
+    
+    return False
 
 def fetch_rss_articles_with_retry(feed_url, max_articles=3):
     """
@@ -330,14 +376,67 @@ def get_daily_news_insight():
         dict: Dictionary containing title, summary, url, and source
               Returns None if no article could be processed
     """
-    print("=== Fetching Daily Higher Ed News Insight ===")
+    print("=== Fetching Daily Higher Ed Tech News Insight ===")
     
-    # Shuffle feed order to distribute load and avoid always hitting the same feed first
-    feeds_to_try = RSS_FEEDS.copy()
-    random.shuffle(feeds_to_try)
+    # Separate tech-focused and general feeds
+    tech_feeds = [feed for feed in RSS_FEEDS if feed.get('tech_focused', False)]
+    general_feeds = [feed for feed in RSS_FEEDS if not feed.get('tech_focused', False)]
     
-    # Try each RSS feed until we successfully get and process an article
-    for feed_info in feeds_to_try:
+    # First, search for tech articles in general feeds
+    print("Searching for tech articles from general feeds...")
+    shuffled_general = general_feeds.copy()
+    random.shuffle(shuffled_general)
+    
+    for feed_info in shuffled_general:
+        try:
+            print(f"Checking {feed_info['name']} for tech articles...")
+            
+            articles = fetch_rss_articles_with_retry(feed_info['url'], max_articles=5)
+            if not articles:
+                continue
+            
+            # Filter for tech-related articles
+            tech_articles = []
+            for article in articles:
+                description = article.get('description', '')
+                if is_tech_related(article['title'], description):
+                    tech_articles.append(article)
+            
+            if tech_articles:
+                print(f"Found {len(tech_articles)} tech articles in {feed_info['name']}")
+                
+                # Process the first tech article found
+                for article in tech_articles:
+                    print(f"Processing tech article: {article['title'][:50]}...")
+                    
+                    content = extract_article_content_safe(article['link'])
+                    if not content:
+                        continue
+                    
+                    summary = summarize_with_openai_safe(content)
+                    if not summary:
+                        continue
+                    
+                    log_success(f"Tech: {article['title'][:50]}...")
+                    print(f"✅ Successfully processed tech article from {feed_info['name']}")
+                    
+                    return {
+                        'title': article['title'],
+                        'summary': summary,
+                        'url': article['link'],
+                        'source': feed_info['name']
+                    }
+                    
+        except Exception as e:
+            print(f"Error processing feed {feed_info['name']}: {e}")
+            continue
+    
+    # If no tech articles found in general feeds, use tech-focused feeds
+    print("No tech articles found in general feeds, trying tech-focused feeds...")
+    shuffled_tech = tech_feeds.copy()
+    random.shuffle(shuffled_tech)
+    
+    for feed_info in shuffled_tech:
         print(f"\nTrying {feed_info['name']}...")
         
         # Fetch articles from this feed
