@@ -10,6 +10,7 @@ from email.message import EmailMessage
 from datetime import datetime
 import sys
 import traceback
+import pytz
 
 def load_credentials():
     """
@@ -42,10 +43,12 @@ def create_morning_email(sender_email, recipient_email):
     Returns:
         EmailMessage: Formatted email message
     """
-    # Get current date and time
-    now = datetime.now()
-    current_date = now.strftime("%A, %B %d, %Y")
-    current_time = now.strftime("%I:%M %p")
+    # Get current date and time in Eastern Time
+    eastern = pytz.timezone('US/Eastern')
+    now_utc = datetime.now(pytz.utc)
+    now_eastern = now_utc.astimezone(eastern)
+    current_date = now_eastern.strftime("%A, %B %d, %Y")
+    current_time = now_eastern.strftime("%I:%M %p %Z")
     
     # Create email message
     msg = EmailMessage()
@@ -70,7 +73,7 @@ Your Campus Whisperer Bot 🤖
 
 ---
 This email was sent automatically via Python script running on Replit.
-Sent at: {now.strftime("%Y-%m-%d %H:%M:%S")}
+Sent at: {now_eastern.strftime("%Y-%m-%d %H:%M:%S %Z")}
 """
     
     msg.set_content(email_body)
