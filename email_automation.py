@@ -54,8 +54,8 @@ def create_morning_email(sender_email, recipient_email):
     msg['From'] = sender_email
     msg['To'] = recipient_email
     
-    # Get daily news insight with fallback
-    print("Fetching daily news insight...")
+    # Get daily tech news insight with fallback
+    print("Fetching daily tech news insight...")
     news_insight = get_daily_news_insight()
     
     # Use fallback if primary news fetching fails
@@ -65,7 +65,7 @@ def create_morning_email(sender_email, recipient_email):
     
     # Create news section
     news_section = f"""
-📡 Campus Insight of the Day
+📡 Higher Ed Tech Insight of the Day
 
 {news_insight['title']}
 
@@ -76,6 +76,38 @@ def create_morning_email(sender_email, recipient_email):
         news_section += f"\n\nRead more: {news_insight['url']}"
     
     news_section += f"\nSource: {news_insight['source']}\n\n"
+    
+    # Get featured job posting
+    print("Fetching featured job posting...")
+    try:
+        job_posting = get_featured_job_posting()
+        
+        job_section = f"""
+🎯 Featured Higher Ed Tech Job
+
+{job_posting['title']}
+{job_posting['company']}
+
+{job_posting['summary']}"""
+        
+        if job_posting['url']:
+            job_section += f"\n\nApply: {job_posting['url']}"
+        
+        job_section += f"\nSource: {job_posting['source']}\n\n"
+        
+    except Exception as e:
+        print(f"Error fetching job posting: {e}")
+        job_section = """
+🎯 Featured Higher Ed Tech Job
+
+Chief Information Officer - Major Research University
+Leading Higher Education Institution
+
+Seeking visionary technology leader to drive digital transformation initiatives across campus. Lead IT strategy, oversee infrastructure modernization, and collaborate with academic leadership.
+
+Source: Higher Ed Tech Network
+
+"""
 
     # Create email body with current date, time, and news
     email_body = f"""Good Morning! 🌞
@@ -86,8 +118,7 @@ Hope you're having a wonderful start to your day!
 🕐 Current Time: {current_time}
 
 This is your automated morning greeting from Campus Whisperer.
-{news_section}
-Have a productive and amazing day ahead! 💪
+{news_section}{job_section}Have a productive and amazing day ahead! 💪
 
 Best regards,
 Your Campus Whisperer Bot 🤖
