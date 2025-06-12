@@ -1,28 +1,39 @@
-# Daily Morning Email Automation
+# Campus Whisperer - Email Automation System
 
-This Python script sends automated morning emails using Gmail SMTP and Replit's scheduling feature.
+A Python-powered email automation tool that sends intelligent, personalized daily morning emails with AI-generated higher education news summaries.
 
-## Features
+## Key Features
 
-- 📧 Sends daily morning emails at 7:00 AM
-- 🔐 Secure credential management using Replit Secrets
-- 📅 Includes current date and time in email body
-- 🛡️ Robust error handling and logging
-- 🌐 Uses Gmail SMTP with SSL (port 465)
+- 📧 Automated daily emails at 7:00 AM Eastern Time
+- 🤖 AI-powered news summarization using OpenAI GPT-4o
+- 📰 Real-time RSS feed parsing from verified Higher Ed sources
+- 🔐 Secure credential management via environment variables
+- 🛡️ Enterprise-grade error handling and retry logic
+- 📊 Comprehensive logging and monitoring
+- 🌐 Gmail SMTP with SSL encryption (port 465)
+
+## Project Structure
+
+### Core Files
+- `email_automation.py` - Unified email service (immediate and scheduled modes)
+- `news_service.py` - RSS feed parsing and OpenAI summarization
+- `feed_tester.py` - RSS feed validation utility
+- `log.txt` - Timestamped success logs
+
+### Configuration
+- `pyproject.toml` - Python dependencies
+- `IMPROVEMENTS_SUMMARY.md` - Enhancement documentation
 
 ## Setup Instructions
 
-### Step 1: Configure Replit Secrets
+### Step 1: Configure Environment Variables
 
-1. Open your Replit project
-2. Click on the "Secrets" tab in the left sidebar (🔒 icon)
-3. Add the following secrets:
+Set up the required environment variables in Replit Secrets:
 
-   **Secret Name:** `GMAIL_ADDRESS`
-   **Secret Value:** Your Gmail address (e.g., your.email@gmail.com)
-
-   **Secret Name:** `GMAIL_APP_PASSWORD`
-   **Secret Value:** Your Gmail App Password (see instructions below)
+**Required Secrets:**
+- `GMAIL_ADDRESS` - Your Gmail address
+- `GMAIL_APP_PASSWORD` - Gmail App Password (not regular password)
+- `OPENAI_API_KEY` - OpenAI API key for news summarization
 
 ### Step 2: Generate Gmail App Password
 
@@ -37,79 +48,52 @@ This Python script sends automated morning emails using Gmail SMTP and Replit's 
 7. Copy the 16-character app password (format: xxxx xxxx xxxx xxxx)
 8. Use this app password in your Replit Secret
 
-### Step 3: Test the Script
+### Step 3: Usage
 
-1. Run the script manually first to test:
-   ```bash
-   python main.py
-   ```
-
-2. If successful, you should see output like:
-   ```
-   ✅ Credentials loaded successfully for: your.email@gmail.com
-   ✅ Morning email sent successfully!
-   🎉 Morning email automation completed successfully!
-   ```
-
-### Step 4: Schedule Daily Execution (7:00 AM)
-
-To schedule the script to run automatically every morning at 7:00 AM:
-
-1. **Option A: Using Replit Cron Jobs**
-   - Go to your Replit project
-   - Click on the "Shell" tab
-   - Install cron if not available: `sudo apt-get update && sudo apt-get install cron`
-   - Edit crontab: `crontab -e`
-   - Add this line for 7:00 AM daily execution:
-     ```
-     0 7 * * * cd /home/runner/your-project-name && python main.py
-     ```
-   - Save and exit (Ctrl+X, then Y, then Enter)
-
-2. **Option B: Using Replit Always On (Recommended)**
-   - Enable "Always On" for your Replit project
-   - The script will run continuously and can be modified to include scheduling logic
-   - Add a scheduling loop to main.py (see below)
-
-3. **Option C: External Scheduling Services**
-   - Use services like GitHub Actions, Heroku Scheduler, or Vercel Cron
-   - Set up a webhook to trigger your Replit project
-
-### Step 5: Add Internal Scheduling (Recommended Approach)
-
-For better reliability, use the `scheduled_main.py` file which includes built-in scheduling:
-
+**Immediate Email (Testing):**
 ```bash
-python scheduled_main.py
+python email_automation.py --mode immediate
 ```
 
-This version will:
-- Run continuously in the background
-- Automatically send emails at 7:00 AM daily
-- Provide status updates and error handling
-- Restart automatically if there are issues
+**Scheduled Service (Production):**
+```bash
+python email_automation.py --mode schedule
+```
 
-### Step 6: Enable Always On (Important)
+### Step 4: RSS Feed Testing
 
-For 24/7 operation on Replit:
+Validate all RSS feeds:
+```bash
+python feed_tester.py
+```
 
-1. Go to your Replit project settings
-2. Enable "Always On" feature (requires Replit subscription)
-3. Your email service will run continuously even when you close the browser
+## Verified RSS Feeds
 
-### Step 7: Deploy to Production
+The system uses these validated higher education news sources:
+- Inside Higher Ed
+- EdTech Magazine Higher Ed  
+- Higher Ed Dive
+- Faculty Focus
+- The PIE News
+- Ruffalo Noel Levitz Blog
+- The Guardian Higher Education
 
-Once tested, you can deploy this to run continuously:
+## Usage Examples
 
-1. **Current Status**: The scheduled service is now running
-2. **Next Email**: Will be sent tomorrow at 7:00 AM
-3. **Monitoring**: Check the console logs for status updates
+**Test RSS Feeds:**
+```bash
+python feed_tester.py
+```
 
-## Files Explained
+**Send Test Email:**
+```bash
+python email_automation.py --mode immediate
+```
 
-- `main.py` - Single-run version for testing
-- `scheduled_main.py` - Continuous service with built-in 7:00 AM scheduling
-- `README.md` - This setup guide
+**Run Scheduler Service:**
+```bash
+python email_automation.py --mode schedule
+```
 
 ## Troubleshooting
 

@@ -1,23 +1,25 @@
 #!/usr/bin/env python3
 """
-Daily Morning Email Automation Script with Built-in Scheduling
-Sends automated morning emails using Gmail SMTP at 7:00 AM daily.
+Daily Morning Email Automation Service
+Unified service for sending automated morning emails with scheduling capabilities.
 """
 
 import smtplib
 import os
-from email.message import EmailMessage
-from datetime import datetime, time
 import sys
 import traceback
 import schedule
 import time as time_module
+import argparse
+from email.message import EmailMessage
+from datetime import datetime
 import pytz
 from news_service import get_daily_news_insight, get_fallback_news_content
 
+
 def load_credentials():
     """
-    Load Gmail credentials from Replit Secrets.
+    Load Gmail credentials from environment variables.
     
     Returns:
         tuple: (gmail_address, app_password) or (None, None) if not found
@@ -25,24 +27,12 @@ def load_credentials():
     gmail_address = os.environ.get('GMAIL_ADDRESS')
     app_password = os.environ.get('GMAIL_APP_PASSWORD')
     
-    if not gmail_address:
-        print("ERROR: GMAIL_ADDRESS not found in environment variables")
-        return None, None
-    
-    if not app_password:
-        print("ERROR: GMAIL_APP_PASSWORD not found in environment variables")
-        return None, None
-    
-    # Verify credentials are properly formatted (basic validation)
-    if '@' not in gmail_address or len(app_password) < 10:
-        print("ERROR: Invalid credential format detected")
-        return None, None
-    
     return gmail_address, app_password
+
 
 def create_morning_email(sender_email, recipient_email):
     """
-    Create a formatted morning email message.
+    Create a formatted morning email message with news content.
     
     Args:
         sender_email (str): Sender's email address
@@ -51,10 +41,9 @@ def create_morning_email(sender_email, recipient_email):
     Returns:
         EmailMessage: Formatted email message
     """
-    # Get current date and time in Eastern Time
+    # Get current Eastern Time
     eastern = pytz.timezone('US/Eastern')
-    now_utc = datetime.now(pytz.utc)
-    now_eastern = now_utc.astimezone(eastern)
+    now_eastern = datetime.now(eastern)
     current_date = now_eastern.strftime("%A, %B %d, %Y")
     current_time = now_eastern.strftime("%I:%M %p %Z")
     
@@ -106,10 +95,10 @@ Your Campus Whisperer Bot 🤖
 This email was sent automatically via Python script running on Replit.
 Sent at: {now_eastern.strftime("%Y-%m-%d %H:%M:%S %Z")}
 """
-    
+
     msg.set_content(email_body)
-    
     return msg
+
 
 def send_email(gmail_address, app_password, recipient_email):
     """
@@ -124,27 +113,34 @@ def send_email(gmail_address, app_password, recipient_email):
         bool: True if email sent successfully, False otherwise
     """
     try:
-        print(f"Attempting to send morning email to {recipient_email}...")
-        
-        # Create email message
+        # Create the email message
         msg = create_morning_email(gmail_address, recipient_email)
         
-        # Connect to Gmail SMTP server
-        print("Connecting to Gmail SMTP server...")
+        print(f"Connecting to Gmail SMTP server...")
+        # Connect to Gmail's SMTP server using SSL
         with smtplib.SMTP_SSL('smtp.gmail.com', 465) as server:
-            print("Logging in to Gmail...")
+            print(f"Logging in with account: {gmail_address}")
             server.login(gmail_address, app_password)
             
-            print("Sending email...")
+            print(f"Sending email to: {recipient_email}")
             server.send_message(msg)
             
-        print("✅ Morning email sent successfully!")
+        print("✅ Email sent successfully!")
+        
+        # Log successful send with timestamp
+        eastern = pytz.timezone('US/Eastern')
+        timestamp = datetime.now(eastern).strftime("%Y-%m-%d %H:%M:%S %Z")
+        with open('log.txt', 'a') as log_file:
+            log_file.write(f"SUCCESS: Email sent at {timestamp} to {recipient_email}\n")
+        
         return True
         
-    except smtplib.SMTPAuthenticationError as e:
-        print(f"❌ SMTP Authentication Error: {e}")
-        print("Please check your Gmail address and app password in Replit Secrets.")
-        print("Make sure you're using an App Password, not your regular Gmail password.")
+    except smtplib.SMTPAuthenticationError:
+        print("❌ Authentication failed. Please check your Gmail address and app password.")
+        return False
+        
+    except smtplib.SMTPRecipientsRefused:
+        print("❌ Recipient email address was refused by the server.")
         return False
         
     except smtplib.SMTPException as e:
@@ -157,18 +153,49 @@ def send_email(gmail_address, app_password, recipient_email):
         traceback.print_exc()
         return False
 
+
+def send_immediate_email():
+    """
+    Send email immediately (for manual execution or testing).
+    """
+    print("=== Immediate Email Execution ===")
+    
+    # Load credentials
+    print("Loading credentials...")
+    gmail_address, app_password = load_credentials()
+    
+    if not gmail_address or not app_password:
+        print("❌ Failed to load credentials. Please check your environment variables.")
+        return False
+    
+    print(f"✅ Credentials loaded successfully for: {gmail_address}")
+    
+    # Recipient email address
+    recipient_email = "shayne.mcgregor@dynamiccampus.com"
+    
+    # Send the email
+    success = send_email(gmail_address, app_password, recipient_email)
+    
+    if success:
+        print("🎉 Email sent successfully!")
+    else:
+        print("💥 Email sending failed!")
+    
+    return success
+
+
 def send_scheduled_email():
     """
     Function to be called by the scheduler at 7:00 AM daily.
     """
     print(f"\n=== Scheduled Morning Email - {datetime.now().strftime('%Y-%m-%d %H:%M:%S')} ===")
     
-    # Load credentials from Replit Secrets
-    print("Loading credentials from Replit Secrets...")
+    # Load credentials
+    print("Loading credentials...")
     gmail_address, app_password = load_credentials()
     
     if not gmail_address or not app_password:
-        print("❌ Failed to load credentials. Please check your Replit Secrets configuration.")
+        print("❌ Failed to load credentials. Please check your environment variables.")
         return
     
     print(f"✅ Credentials loaded successfully for: {gmail_address}")
@@ -184,11 +211,12 @@ def send_scheduled_email():
     else:
         print("💥 Scheduled morning email failed!")
 
-def main():
+
+def run_scheduler():
     """
-    Main function to set up scheduling and run the email automation service.
+    Run the email scheduler service that sends emails at 7:00 AM Eastern daily.
     """
-    print("=== Daily Morning Email Automation Service ===")
+    print("=== Daily Morning Email Scheduler Service ===")
     print(f"Service started at: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
     
     # Test credentials on startup
@@ -196,36 +224,45 @@ def main():
     gmail_address, app_password = load_credentials()
     
     if not gmail_address or not app_password:
-        print("❌ Failed to load credentials. Please check your Replit Secrets configuration.")
+        print("❌ Failed to load credentials. Please check your environment variables.")
         sys.exit(1)
     
-    print(f"✅ Credentials verified for: {gmail_address}")
+    print(f"✅ Credentials validated for: {gmail_address}")
     
-    # Schedule the email to be sent daily at 7:00 AM
+    # Schedule the email to be sent daily at 7:00 AM Eastern Time
+    # Note: schedule library uses system time, so we need to account for timezone
     schedule.every().day.at("07:00").do(send_scheduled_email)
     
-    print("📅 Email scheduled to send daily at 7:00 AM")
-    print("🔄 Service is now running... Press Ctrl+C to stop")
+    print("📅 Email scheduled for 7:00 AM Eastern Time daily")
+    print("🔄 Scheduler is now running... (Press Ctrl+C to stop)")
     
-    # Keep the script running and check for scheduled jobs
-    while True:
-        try:
+    # Keep the script running
+    try:
+        while True:
             schedule.run_pending()
             time_module.sleep(60)  # Check every minute
-            
-            # Optional: Print status every hour
-            now = datetime.now()
-            if now.minute == 0:  # On the hour
-                next_run = schedule.next_run()
-                print(f"⏰ Status check at {now.strftime('%H:%M')} - Next email scheduled for: {next_run}")
-                
-        except KeyboardInterrupt:
-            print("\n👋 Email automation service stopped by user")
-            break
-        except Exception as e:
-            print(f"❌ Unexpected error in main loop: {e}")
-            traceback.print_exc()
-            time_module.sleep(300)  # Wait 5 minutes before retrying
+    except KeyboardInterrupt:
+        print("\n👋 Scheduler stopped by user.")
+        sys.exit(0)
+
+
+def main():
+    """
+    Main function with argument parsing for different execution modes.
+    """
+    parser = argparse.ArgumentParser(description='Campus Whisperer Email Automation')
+    parser.add_argument('--mode', 
+                       choices=['immediate', 'schedule'], 
+                       default='immediate',
+                       help='Execution mode: immediate (send now) or schedule (run scheduler)')
+    
+    args = parser.parse_args()
+    
+    if args.mode == 'immediate':
+        send_immediate_email()
+    elif args.mode == 'schedule':
+        run_scheduler()
+
 
 if __name__ == "__main__":
     main()
