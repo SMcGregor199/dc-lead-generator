@@ -13,7 +13,7 @@ import traceback
 import schedule
 import time as time_module
 import pytz
-from news_fetcher_improved import get_daily_news_insight, get_fallback_news_content
+from news_service import get_daily_news_insight, get_fallback_news_content
 
 def load_credentials():
     """

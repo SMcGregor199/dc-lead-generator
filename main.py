@@ -11,7 +11,7 @@ from datetime import datetime
 import sys
 import traceback
 import pytz
-from news_fetcher_improved import get_daily_news_insight, get_fallback_news_content
+from news_service import get_daily_news_insight, get_fallback_news_content
 
 
 def load_credentials():
