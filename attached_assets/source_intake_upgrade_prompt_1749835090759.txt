@@ -1,0 +1,76 @@
+
+SYSTEM UPGRADE: INTELLIGENT SOURCE INTAKE & CROSS-REFERENCING
+
+I’m refining my higher ed lead generation system (dc-lead-generator) to increase the quality, relevance, and reliability of the sources it pulls from — particularly for news articles, job postings, and cross-referenced opportunities.
+
+OBJECTIVES:
+
+1. Ensure news and job sources are always fresh, valid, and specific to institutional IT transformation efforts.
+2. Eliminate stale or outdated data.
+3. Improve lead confidence by intelligently cross-referencing multiple data points (articles + jobs).
+4. Automate source validation and incorporate broader source types over time.
+
+REQUIRED IMPROVEMENTS
+
+1. Automate Job Feed Refresh
+
+- Replace or augment the static `higher_ed_jobs.json` file with an automated job scraper.
+- Use one of the following sources for scraping:
+  - Google Jobs Search API (search for roles like CIO, VP of IT, Chief Data Officer)
+  - HigherEdJobs RSS (if working)
+  - EDUCAUSE Career Center
+- Target roles with titles that imply transformation needs (e.g., "data governance", "IT strategy", "CIO", etc.)
+- Schedule this scraper to run daily or weekly and output to a structured JSON like:
+
+{
+  "title": "Chief Information Officer",
+  "institution": "University of Vermont",
+  "description": "...",
+  "location": "Burlington, VT",
+  "url": "..."
+}
+
+2. RSS Feed Health Monitoring
+
+- Refactor `feed_tester.py` into an automated health checker script.
+- Run this checker weekly and log results in a file (e.g., `rss_health_log.txt`).
+- Flag feeds with:
+  - Non-200 responses
+  - Repeated empty results (no entries)
+- Optionally email admin if feeds are broken for more than 2 consecutive runs.
+
+3. Source Confidence Scoring System
+
+- Assign confidence weights to each source type:
+  - +0.9 = Institutional RFP or strategic plan
+  - +0.8 = Press release from .edu domain
+  - +0.7 = Full-length article from Higher Ed Dive, Inside Higher Ed
+  - +0.4 = Job post without detail
+  - +0.2 = Blog/opinion piece
+
+- Add a confidence field to each lead using this logic, and factor it into lead ranking or filtering.
+- Store this logic in a centralized dictionary or function so it can be adjusted later.
+
+4. Multi-Source Institution Matching
+
+- Add logic that detects when two or more sources (job + article) reference the same institution.
+- If the institution name matches and the dates are within ~30 days, merge the insights into a single lead.
+- This boosts confidence and gives a fuller picture of the opportunity.
+
+5. Expand Source Types (for future implementation)
+
+- Prepare a system to pull from additional trusted sources:
+  - EDUCAUSE Library
+  - Conference agendas (EDUCAUSE, Internet2, NACUBO)
+  - Public university .edu press rooms
+  - BidNet, public RFP sites
+- Allow for `.edu` press room URLs to be stored in a config list and scraped weekly.
+
+NOTES & TESTING
+
+- Be sure all updated modules continue writing to `higher_ed_leads.json` and integrate with the fallback logic and confidence scoring.
+- Annotate any new config blocks with comments like:
+
+# NOTE: These weights are defaults and should be reviewed by Dynamic Campus before production use.
+
+This prompt should be treated as a source resilience upgrade. It ensures our leads aren't just intelligent — they're comprehensive, fresh, and verified. Let me know when the upgrades are in place and I’ll help verify lead accuracy!

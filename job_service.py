@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """
 Higher Education Technology Job Posting Service
-Fetches live higher ed tech jobs via SerpAPI with persistent storage
+Automated job scraper for fresh higher ed IT leadership positions
+Enhanced with confidence scoring and cross-referencing capabilities
 """
 
 import requests
@@ -10,10 +11,49 @@ import time
 import os
 import json
 import hashlib
+from datetime import datetime, timedelta
 from openai import OpenAI
 
 # File to store persistent job database
 JOBS_DATABASE_FILE = 'higher_ed_jobs.json'
+
+# NOTE: These confidence weights are defaults and should be reviewed by Dynamic Campus before production use.
+SOURCE_CONFIDENCE_WEIGHTS = {
+    'institutional_rfp': 0.9,      # RFP or strategic plan documents
+    'edu_press_release': 0.8,      # Press release from .edu domain
+    'higher_ed_article': 0.7,      # Full-length article from trusted sources
+    'job_posting_detailed': 0.6,   # Detailed job posting with transformation context
+    'job_posting_basic': 0.4,      # Basic job posting without detail
+    'blog_opinion': 0.2            # Blog or opinion piece
+}
+
+# Target job titles that imply transformation needs
+IT_LEADERSHIP_TITLES = [
+    'Chief Information Officer',
+    'VP Information Technology', 
+    'CIO',
+    'Chief Data Officer',
+    'CDO',
+    'Director Information Technology',
+    'VP Technology',
+    'IT Director',
+    'Data Governance',
+    'Digital Transformation',
+    'IT Strategy',
+    'Information Security Officer',
+    'Chief Technology Officer',
+    'CTO'
+]
+
+# Higher education job search queries
+HIGHER_ED_JOB_QUERIES = [
+    'Chief Information Officer university',
+    'CIO college higher education',
+    'VP Information Technology university',
+    'Chief Data Officer higher education',
+    'Director IT university college',
+    'Information Technology leadership higher education'
+]
 
 # Default curated job postings (seed data)
 DEFAULT_JOB_POSTINGS = [
@@ -157,6 +197,180 @@ Job description:
     except Exception as e:
         print(f"OpenAI summarization failed: {e}")
         return job_description[:200] + "..." if len(job_description) > 200 else job_description
+
+def calculate_job_confidence_score(job_title, job_description, institution):
+    """
+    Calculate confidence score for job posting based on content and context.
+    
+    Args:
+        job_title (str): Job title
+        job_description (str): Job description text
+        institution (str): Institution name
+    
+    Returns:
+        float: Confidence score between 0.2 and 0.9
+    """
+    # NOTE: These confidence weights are defaults and should be reviewed by Dynamic Campus before production use.
+    
+    base_score = SOURCE_CONFIDENCE_WEIGHTS['job_posting_basic']  # 0.4
+    
+    # Boost for detailed descriptions
+    if len(job_description) > 500:
+        base_score = SOURCE_CONFIDENCE_WEIGHTS['job_posting_detailed']  # 0.6
+    
+    # Boost for transformation-related keywords
+    transformation_keywords = [
+        'digital transformation', 'modernization', 'strategic', 'enterprise',
+        'governance', 'cybersecurity', 'cloud', 'analytics', 'ERP'
+    ]
+    
+    content_lower = (job_title + ' ' + job_description).lower()
+    keyword_matches = sum(1 for keyword in transformation_keywords if keyword in content_lower)
+    
+    if keyword_matches >= 3:
+        base_score += 0.1
+    elif keyword_matches >= 2:
+        base_score += 0.05
+    
+    # Boost for senior-level positions
+    senior_indicators = ['chief', 'director', 'vice president', 'vp', 'senior']
+    if any(indicator in job_title.lower() for indicator in senior_indicators):
+        base_score += 0.05
+    
+    return min(0.9, base_score)
+
+def scrape_fresh_higher_ed_jobs():
+    """
+    Scrape fresh higher education IT jobs using SerpAPI.
+    Replaces static job data with current opportunities.
+    
+    Returns:
+        list: List of fresh job postings
+    """
+    try:
+        serpapi_key = os.environ.get('SERPAPI_KEY')
+        if not serpapi_key:
+            print("SERPAPI_KEY not found - using fallback job data")
+            return []
+        
+        fresh_jobs = []
+        
+        for query in HIGHER_ED_JOB_QUERIES[:3]:  # Limit to 3 queries to avoid rate limits
+            try:
+                print(f"Searching jobs for: {query}")
+                
+                params = {
+                    'api_key': serpapi_key,
+                    'engine': 'google_jobs',
+                    'q': query,
+                    'hl': 'en',
+                    'gl': 'us',
+                    'chips': 'date_posted:month',  # Jobs from last month
+                    'num': 10
+                }
+                
+                response = requests.get('https://serpapi.com/search', params=params, timeout=30)
+                
+                if response.status_code == 200:
+                    data = response.json()
+                    jobs_results = data.get('jobs_results', [])
+                    
+                    for job in jobs_results:
+                        title = job.get('title', '')
+                        company = job.get('company_name', '')
+                        description = job.get('description', '')
+                        location = job.get('location', '')
+                        
+                        # Filter for higher education institutions
+                        if any(indicator in company.lower() for indicator in 
+                              ['university', 'college', 'institute', 'academy', 'school']):
+                            
+                            # Calculate confidence score
+                            confidence = calculate_job_confidence_score(title, description, company)
+                            
+                            fresh_job = {
+                                'title': title,
+                                'company': company,
+                                'summary': get_openai_summary(description),
+                                'description': description[:1000],  # Truncate for storage
+                                'location': location,
+                                'url': job.get('apply_link', ''),
+                                'source': 'SerpAPI Google Jobs',
+                                'confidence_score': confidence,
+                                'date_scraped': datetime.now().strftime('%Y-%m-%d'),
+                                'job_id': generate_job_id(title, company)
+                            }
+                            
+                            fresh_jobs.append(fresh_job)
+                            print(f"Found: {title} at {company} (confidence: {confidence:.2f})")
+                    
+                    time.sleep(2)  # Rate limiting
+                else:
+                    print(f"SerpAPI request failed: {response.status_code}")
+                    
+            except Exception as e:
+                print(f"Error processing query '{query}': {e}")
+                continue
+        
+        print(f"Scraped {len(fresh_jobs)} fresh job postings")
+        return fresh_jobs
+        
+    except Exception as e:
+        print(f"Error scraping fresh jobs: {e}")
+        return []
+
+def refresh_jobs_database():
+    """
+    Refresh the jobs database with fresh postings, keeping recent valid entries.
+    
+    Returns:
+        bool: True if refresh successful, False otherwise
+    """
+    try:
+        print("Refreshing jobs database with fresh postings...")
+        
+        # Load existing jobs
+        existing_jobs = load_jobs_database()
+        
+        # Keep jobs from last 30 days
+        cutoff_date = datetime.now() - timedelta(days=30)
+        recent_jobs = []
+        
+        for job in existing_jobs:
+            job_date_str = job.get('date_scraped', '')
+            if job_date_str:
+                try:
+                    job_date = datetime.strptime(job_date_str, '%Y-%m-%d')
+                    if job_date >= cutoff_date:
+                        recent_jobs.append(job)
+                except:
+                    continue
+        
+        # Scrape fresh jobs
+        fresh_jobs = scrape_fresh_higher_ed_jobs()
+        
+        # Combine and deduplicate
+        all_jobs = recent_jobs + fresh_jobs
+        
+        # Remove duplicates based on job_id
+        seen_ids = set()
+        deduplicated_jobs = []
+        
+        for job in all_jobs:
+            job_id = job.get('job_id', generate_job_id(job['title'], job['company']))
+            if job_id not in seen_ids:
+                seen_ids.add(job_id)
+                deduplicated_jobs.append(job)
+        
+        # Save refreshed database
+        save_jobs_database(deduplicated_jobs)
+        
+        print(f"Jobs database refreshed: {len(deduplicated_jobs)} total jobs ({len(fresh_jobs)} new)")
+        return True
+        
+    except Exception as e:
+        print(f"Error refreshing jobs database: {e}")
+        return False
 
 def fetch_jobs_via_serpapi():
     """
