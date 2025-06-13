@@ -13,19 +13,7 @@ author = "agent"
 
 [[workflows.workflow.tasks]]
 task = "workflow.run"
-args = "Email Automation"
-
-[[workflows.workflow.tasks]]
-task = "workflow.run"
 args = "Scheduled Email Service"
-
-[[workflows.workflow]]
-name = "Email Automation"
-author = "agent"
-
-[[workflows.workflow.tasks]]
-task = "shell.exec"
-args = "python email_automation.py --mode immediate"
 
 [[workflows.workflow]]
 name = "Scheduled Email Service"

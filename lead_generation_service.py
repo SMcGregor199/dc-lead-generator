@@ -279,7 +279,11 @@ Provide a 1-2 sentence strategic recommendation."""
                     temperature=0.4
                 )
                 
-                suggested_action = action_response.choices[0].message.content.strip()
+                action_content = action_response.choices[0].message.content
+                if action_content:
+                    suggested_action = action_content.strip()
+                else:
+                    suggested_action = "Contact institution leadership to discuss digital transformation opportunities."
                 
                 lead = LeadOpportunity(
                     institution=lead_data['institution'],
