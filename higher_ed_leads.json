@@ -1,0 +1,60 @@
+[
+  {
+    "institution": "General Higher Education Institutions",
+    "opportunity_summary": "The rise of artificial intelligence in research computing is pushing universities to enhance their computing capabilities. This creates an opportunity for digital transformation consultancies to assist institutions in implementing high-performance computing solutions, particularly through partnerships with technology providers like Vertiv and NVIDIA.",
+    "engagement_tier": "Medium",
+    "suggested_action": "Dynamic Campus should establish strategic partnerships with technology leaders like Vertiv and NVIDIA to offer tailored high-performance computing solutions and AI-driven research capabilities to higher education institutions, positioning itself as a key enabler of digital transformation in academia. By leveraging these partnerships, Dynamic Campus can provide comprehensive support in upgrading infrastructure and training faculty and staff, ensuring seamless integration and maximized research potential.",
+    "sources": [
+      {
+        "title": "Tennessee Lawsuit Puts HSIs’ Fate on the Line",
+        "url": "https://www.insidehighered.com/news/government/politics-elections/2025/06/13/tenn-lawsuit-puts-hispanic-servings-fate-line"
+      },
+      {
+        "title": "Tulane Environmentalist Resigns Amid Research ‘Gag Order’",
+        "url": "https://www.insidehighered.com/news/faculty-issues/academic-freedom/2025/06/13/tulane-environmentalist-resigns-amid-research-gag"
+      },
+      {
+        "title": "A More Structured Cloud Is a More Cost-Effective Cloud",
+        "url": "https://edtechmagazine.com/higher/article/2025/06/more-structured-cloud-more-cost-effective-cloud"
+      },
+      {
+        "title": "Q&A: Meeting the Demands of High-Performance Research Computing in Higher Ed",
+        "url": "https://edtechmagazine.com/higher/article/2025/06/qa-meeting-demands-high-performance-research-computing-higher-ed"
+      },
+      {
+        "title": "AI Ethics in Higher Education: How Schools Are Proceeding",
+        "url": "https://edtechmagazine.com/higher/article/2025/06/ai-ethics-higher-education-how-schools-are-proceeding-perfcon"
+      }
+    ],
+    "date_identified": "06/13/2025",
+    "confidence_score": 0.9,
+    "lead_type": "AI/Data",
+    "notes": "Triangulated from 5 sources. Confidence: 0.90",
+    "lead_id": "bff2518407ed"
+  },
+  {
+    "institution": "- University of California, Irvine",
+    "opportunity_summary": "University of California, Irvine is positioned to engage in conversations about AI ethics, leveraging its institutional expertise and the leadership of Tom Andriola, vice chancellor for IT and data, to address AI's ethical considerations in higher education.",
+    "engagement_tier": "Medium",
+    "suggested_action": "Dynamic Campus should propose a partnership with the University of California, Irvine to develop a comprehensive AI ethics curriculum and workshop series, leveraging Tom Andriola's leadership to position the university as a thought leader in ethical AI practices in higher education. This initiative could include collaborative research projects, guest lectures, and public symposiums to engage both the academic community and industry stakeholders.",
+    "sources": [
+      {
+        "title": "AI Ethics in Higher Education: How Schools Are Proceeding",
+        "url": "https://edtechmagazine.com/higher/article/2025/06/ai-ethics-higher-education-how-schools-are-proceeding-perfcon"
+      },
+      {
+        "title": "Tennessee Lawsuit Puts HSIs’ Fate on the Line",
+        "url": "https://www.insidehighered.com/news/government/politics-elections/2025/06/13/tenn-lawsuit-puts-hispanic-servings-fate-line"
+      },
+      {
+        "title": "Q&A: Meeting the Demands of High-Performance Research Computing in Higher Ed",
+        "url": "https://edtechmagazine.com/higher/article/2025/06/qa-meeting-demands-high-performance-research-computing-higher-ed"
+      }
+    ],
+    "date_identified": "06/13/2025",
+    "confidence_score": 0.7,
+    "lead_type": "AI/Data",
+    "notes": "Institution-specific analysis from 3 sources. Confidence: 0.70",
+    "lead_id": "26e8d12f520c"
+  }
+]

@@ -31,14 +31,15 @@ class LeadOpportunity:
     """Data class for lead opportunities"""
     institution: str
     opportunity_summary: str
-    engagement_tier: str  # Small | Medium | Recurring | Full Outsourcing
+    engagement_tier: str  # Small | Medium | Recurring | Full Outsourcing | Exploratory
     suggested_action: str
     sources: List[Dict[str, str]]  # [{"title": "", "url": ""}]
     date_identified: str
     confidence_score: float
-    lead_type: str  # ERP | IT Leadership | Cybersecurity | AI/Data | LMS/CRM | Analytics
+    lead_type: str  # ERP | IT Leadership | Cybersecurity | AI/Data | LMS/CRM | Analytics | Signal
     notes: str
     lead_id: str
+    is_fallback: bool = False  # True for Signal Insights
 
 # RSS Feeds for lead generation
 HIGHER_ED_FEEDS = [
@@ -83,8 +84,12 @@ ENGAGEMENT_TIERS = {
     'Small': 'Single project or consultation (under $50K)',
     'Medium': 'Multi-phase implementation (50K-200K)',
     'Recurring': 'Ongoing advisory or managed services',
-    'Full Outsourcing': 'Comprehensive IT transformation (200K+)'
+    'Full Outsourcing': 'Comprehensive IT transformation (200K+)',
+    'Exploratory': 'Trend to monitor; not immediately actionable'
 }
+
+# Configuration for institution confidence threshold
+INSTITUTION_CONFIDENCE_THRESHOLD = 0.6
 
 def get_openai_client():
     """Initialize OpenAI client"""
@@ -156,14 +161,25 @@ def extract_institutions_from_text(text):
         return []
     
     try:
-        prompt = f"""Extract all higher education institution names from this text. Return only institution names, one per line, no additional text.
+        prompt = f"""Extract all higher education institution names from this text. Return only official institution names that are specifically mentioned, one per line. Do not include generic references like "universities" or "colleges".
+
+Examples of what to extract:
+- "Harvard University" 
+- "MIT"
+- "University of California, Berkeley"
+- "Tulane University"
+
+Do not extract:
+- "universities"
+- "higher education institutions" 
+- "colleges"
 
 Text: {text[:2000]}"""
 
         response = client.chat.completions.create(
             model="gpt-4o",
             messages=[
-                {"role": "system", "content": "You are an expert at identifying higher education institutions. Extract only official institution names."},
+                {"role": "system", "content": "You are an expert at identifying specific higher education institutions. Only extract explicitly named institutions, not generic references."},
                 {"role": "user", "content": prompt}
             ],
             max_tokens=200,
@@ -174,10 +190,16 @@ Text: {text[:2000]}"""
         content = response.choices[0].message.content
         if content:
             for line in content.strip().split('\n'):
-                if line.strip() and ('university' in line.lower() or 'college' in line.lower()):
-                    institutions.append(line.strip())
+                line = line.strip()
+                # Clean up formatting (remove bullets, dashes, numbers)
+                line = line.lstrip('- •*1234567890. ')
+                
+                if (line and 
+                    ('university' in line.lower() or 'college' in line.lower() or 'institute' in line.lower()) and
+                    not any(generic in line.lower() for generic in ['universities', 'colleges', 'institutions', 'higher education', 'all ', 'many ', 'some ', 'various'])):
+                    institutions.append(line)
         
-        return institutions[:3]  # Limit to 3 institutions per article
+        return institutions[:5]  # Return up to 5 specific institutions
         
     except Exception as e:
         print(f"Error extracting institutions: {e}")
@@ -190,21 +212,61 @@ def analyze_lead_potential(articles_data):
         return []
     
     try:
-        # Combine article data for analysis
-        combined_text = ""
-        sources = []
+        # First, extract all institutions mentioned across articles
+        all_institutions = set()
+        institution_articles = {}
         
         for article in articles_data:
-            combined_text += f"Title: {article['title']}\nSummary: {article['summary']}\nSource: {article['source']}\n\n"
-            sources.append({"title": article['title'], "url": article['url']})
+            article_text = f"{article['title']} {article['summary']}"
+            institutions = extract_institutions_from_text(article_text)
+            
+            for institution in institutions:
+                all_institutions.add(institution)
+                if institution not in institution_articles:
+                    institution_articles[institution] = []
+                institution_articles[institution].append(article)
         
-        if len(sources) < 3:
-            print("Insufficient sources for triangulated lead analysis")
+        if not all_institutions:
+            print("No specific institutions found in articles")
             return []
         
-        prompt = f"""Analyze these higher education articles to identify genuine business opportunities for a digital transformation consultancy. 
+        print(f"Found specific institutions: {list(all_institutions)}")
+        
+        # Now analyze each institution for lead potential
+        processed_leads = []
+        
+        for institution in all_institutions:
+            related_articles = institution_articles[institution]
+            
+            # Combine article data for this institution
+            combined_text = ""
+            sources = []
+            
+            for article in related_articles:
+                combined_text += f"Title: {article['title']}\nSummary: {article['summary']}\nSource: {article['source']}\n\n"
+                sources.append({"title": article['title'], "url": article['url']})
+            
+            # Add additional context from other articles mentioning similar topics
+            for article in articles_data:
+                if article not in related_articles:
+                    article_text = f"{article['title']} {article['summary']}".lower()
+                    institution_keywords = institution.lower().split()
+                    
+                    # Check if article discusses similar topics that could be relevant
+                    tech_keywords = ['technology', 'digital', 'ai', 'cybersecurity', 'erp', 'system', 'data']
+                    if any(keyword in article_text for keyword in tech_keywords):
+                        sources.append({"title": article['title'], "url": article['url']})
+                        combined_text += f"Title: {article['title']}\nSummary: {article['summary'][:500]}\nSource: {article['source']}\n\n"
+            
+            if len(sources) < 2:  # Need at least 2 sources for credibility
+                print(f"Insufficient sources for {institution}")
+                continue
+            
+            prompt = f"""Analyze these articles to identify specific business opportunities for a digital transformation consultancy at {institution}.
 
-Focus on these opportunity types:
+CRITICAL: Only identify opportunities if there is explicit evidence in the articles about {institution}. Do not make generic assumptions.
+
+Focus on these opportunity types ONLY if explicitly mentioned or strongly implied for {institution}:
 - ERP modernization or system transitions
 - IT leadership changes (new CIOs, CTOs, digital officers)
 - Cybersecurity incidents or policy changes
@@ -212,63 +274,53 @@ Focus on these opportunity types:
 - LMS/CRM implementations or upgrades
 - Analytics or institutional research transformations
 
-For each potential lead, provide:
-1. Institution name
-2. Opportunity type
-3. Brief description (2-3 sentences)
-4. Engagement tier (Small/Medium/Recurring/Full Outsourcing)
-5. Confidence score (0.1-1.0)
+Articles mentioning {institution}:
+{combined_text[:3000]}
 
-Only identify leads with strong evidence and clear business relevance.
-
-Articles:
-{combined_text[:4000]}
-
-Respond in JSON format:
+If you find a genuine opportunity for {institution}, respond in JSON format:
 {{
-    "leads": [
-        {{
-            "institution": "Institution Name",
-            "lead_type": "ERP|IT Leadership|Cybersecurity|AI/Data|LMS/CRM|Analytics",
-            "opportunity_summary": "Brief description",
-            "engagement_tier": "Small|Medium|Recurring|Full Outsourcing",
-            "confidence_score": 0.8
-        }}
-    ]
+    "lead_found": true,
+    "institution": "{institution}",
+    "lead_type": "ERP|IT Leadership|Cybersecurity|AI/Data|LMS/CRM|Analytics",
+    "opportunity_summary": "Specific description of what {institution} needs/is doing",
+    "engagement_tier": "Small|Medium|Recurring|Full Outsourcing",
+    "confidence_score": 0.7
+}}
+
+If no specific opportunity is evident for {institution}, respond:
+{{
+    "lead_found": false,
+    "reason": "Brief explanation"
 }}"""
 
-        response = client.chat.completions.create(
-            model="gpt-4o",
-            messages=[
-                {"role": "system", "content": "You are an expert business development analyst specializing in higher education technology opportunities."},
-                {"role": "user", "content": prompt}
-            ],
-            response_format={"type": "json_object"},
-            max_tokens=1000,
-            temperature=0.3
-        )
-        
-        content = response.choices[0].message.content
-        if not content:
-            return []
-        try:
-            result = json.loads(content)
-        except json.JSONDecodeError:
-            print("Error parsing AI response as JSON")
-            return []
-        
-        # Process and enhance leads
-        processed_leads = []
-        for lead_data in result.get('leads', []):
-            if lead_data['confidence_score'] >= 0.6:  # Minimum confidence threshold
+            analysis_response = client.chat.completions.create(
+                model="gpt-4o",
+                messages=[
+                    {"role": "system", "content": f"You are analyzing business opportunities specifically for {institution}. Only identify opportunities with explicit evidence."},
+                    {"role": "user", "content": prompt}
+                ],
+                response_format={"type": "json_object"},
+                max_tokens=500,
+                temperature=0.2
+            )
+            
+            analysis_content = analysis_response.choices[0].message.content
+            if not analysis_content:
+                continue
                 
-                # Generate suggested action using AI
-                action_prompt = f"""For this higher education technology opportunity, suggest a specific strategic action for Dynamic Campus (a digital transformation consultancy):
+            try:
+                analysis_result = json.loads(analysis_content)
+            except json.JSONDecodeError:
+                print(f"Error parsing analysis for {institution}")
+                continue
+            
+            if analysis_result.get('lead_found') and analysis_result.get('confidence_score', 0) >= INSTITUTION_CONFIDENCE_THRESHOLD:
+                # Generate suggested action
+                action_prompt = f"""For this specific opportunity at {institution}, suggest a concrete strategic action for Dynamic Campus:
 
-Institution: {lead_data['institution']}
-Opportunity: {lead_data['opportunity_summary']}
-Type: {lead_data['lead_type']}
-Tier: {lead_data['engagement_tier']}
+Institution: {institution}
+Opportunity: {analysis_result['opportunity_summary']}
+Type: {analysis_result['lead_type']}
 
 Provide a 1-2 sentence strategic recommendation."""
 
@@ -283,22 +335,32 @@ Provide a 1-2 sentence strategic recommendation."""
                 if action_content:
                     suggested_action = action_content.strip()
                 else:
-                    suggested_action = "Contact institution leadership to discuss digital transformation opportunities."
+                    suggested_action = f"Contact {institution} leadership to discuss digital transformation opportunities."
                 
                 lead = LeadOpportunity(
-                    institution=lead_data['institution'],
-                    opportunity_summary=lead_data['opportunity_summary'],
-                    engagement_tier=lead_data['engagement_tier'],
+                    institution=institution,
+                    opportunity_summary=analysis_result['opportunity_summary'],
+                    engagement_tier=analysis_result['engagement_tier'],
                     suggested_action=suggested_action,
-                    sources=sources,
+                    sources=sources[:5],  # Limit to 5 sources
                     date_identified=datetime.now().strftime('%m/%d/%Y'),
-                    confidence_score=lead_data['confidence_score'],
-                    lead_type=lead_data['lead_type'],
-                    notes=f"Triangulated from {len(sources)} sources. Confidence: {lead_data['confidence_score']:.2f}",
-                    lead_id=generate_lead_id(lead_data['institution'], lead_data['lead_type'])
+                    confidence_score=analysis_result['confidence_score'],
+                    lead_type=analysis_result['lead_type'],
+                    notes=f"Institution-specific analysis from {len(sources)} sources. Confidence: {analysis_result['confidence_score']:.2f}",
+                    lead_id=generate_lead_id(institution, analysis_result['lead_type']),
+                    is_fallback=False
                 )
                 
                 processed_leads.append(lead)
+                print(f"Generated lead for {institution}: {analysis_result['lead_type']}")
+            else:
+                print(f"No qualified opportunity found for {institution}")
+        
+        # If no institution-specific leads found, generate a Signal Insight fallback
+        if not processed_leads:
+            fallback_lead = generate_signal_insight(articles_data)
+            if fallback_lead:
+                processed_leads.append(fallback_lead)
         
         return processed_leads
         
