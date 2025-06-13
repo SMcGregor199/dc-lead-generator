@@ -205,6 +205,100 @@ Text: {text[:2000]}"""
         print(f"Error extracting institutions: {e}")
         return []
 
+def generate_signal_insight(articles_data):
+    """Generate a Signal Insight fallback when no specific institutions are identified"""
+    client = get_openai_client()
+    if not client:
+        return None
+    
+    try:
+        # Combine article data for trend analysis
+        combined_text = ""
+        sources = []
+        
+        for article in articles_data:
+            combined_text += f"Title: {article['title']}\nSummary: {article['summary']}\nSource: {article['source']}\n\n"
+            sources.append({"title": article['title'], "url": article['url']})
+        
+        prompt = f"""Analyze these higher education articles to identify emerging trends or sector-wide issues that could affect multiple institutions, even if no specific universities are named.
+
+Focus on trends like:
+- Sector-wide technology adoption patterns
+- Regulatory or policy changes affecting higher ed IT
+- Emerging cybersecurity threats or best practices
+- AI/data governance developments across higher education
+- ERP or system modernization trends
+- Funding or budget pressures affecting IT investments
+
+Articles:
+{combined_text[:3000]}
+
+If you identify a meaningful trend or signal, respond in JSON format:
+{{
+    "signal_found": true,
+    "trend_summary": "2-4 sentence description of the emerging trend or issue",
+    "potential_impact": "How this might affect higher education institutions",
+    "confidence_score": 0.5
+}}
+
+If no clear trend emerges, respond:
+{{
+    "signal_found": false,
+    "reason": "Brief explanation"
+}}"""
+
+        response = client.chat.completions.create(
+            model="gpt-4o",
+            messages=[
+                {"role": "system", "content": "You are a higher education technology trend analyst. Identify sector-wide patterns and emerging issues."},
+                {"role": "user", "content": prompt}
+            ],
+            response_format={"type": "json_object"},
+            max_tokens=400,
+            temperature=0.3
+        )
+        
+        content = response.choices[0].message.content
+        if not content:
+            return None
+            
+        try:
+            result = json.loads(content)
+        except json.JSONDecodeError:
+            print("Error parsing Signal Insight response")
+            return None
+        
+        if result.get('signal_found') and result.get('confidence_score', 0) >= 0.4:
+            # Create fallback suggested action
+            suggested_action = ("Brief internal review: Does this signal align with existing Dynamic Campus services? "
+                              "Could it affect existing clients or near-future opportunities?")
+            
+            # Generate trend summary combining both fields
+            trend_summary = f"{result['trend_summary']} {result.get('potential_impact', '')}"
+            
+            fallback_lead = LeadOpportunity(
+                institution="❓ No specific institution identified",
+                opportunity_summary=trend_summary,
+                engagement_tier="Exploratory",
+                suggested_action=suggested_action,
+                sources=sources[:5],
+                date_identified=datetime.now().strftime('%m/%d/%Y'),
+                confidence_score=result['confidence_score'],
+                lead_type="Signal",
+                notes=f"This is a fallback signal with no identified institution. Confidence: {result['confidence_score']:.2f}",
+                lead_id=generate_lead_id("signal_insight", "fallback"),
+                is_fallback=True
+            )
+            
+            print(f"Generated Signal Insight fallback with confidence: {result['confidence_score']:.2f}")
+            return fallback_lead
+        
+        return None
+        
+    except Exception as e:
+        print(f"Error generating Signal Insight: {e}")
+        return None
+
 def analyze_lead_potential(articles_data):
     """Analyze articles to identify potential leads using AI"""
     client = get_openai_client()
@@ -504,7 +598,8 @@ def identify_new_leads():
         'confidence_score': best_lead.confidence_score,
         'lead_type': best_lead.lead_type,
         'notes': best_lead.notes,
-        'lead_id': best_lead.lead_id
+        'lead_id': best_lead.lead_id,
+        'is_fallback': best_lead.is_fallback
     }
     
     existing_leads.append(lead_dict)
@@ -521,9 +616,38 @@ def create_lead_email(lead):
     for i, source in enumerate(lead.sources[:3], 1):
         sources_text += f"- [{source['title'][:60]}...]({source['url']})\n"
     
-    subject = f"🧠 New Lead Identified: {lead.institution} | {lead.lead_type} | {lead.engagement_tier}"
-    
-    body = f"""**🎓 Institution:** {lead.institution}
+    if lead.is_fallback:
+        # Signal Insight fallback format
+        subject = f"📡 Signal Insight: {lead.lead_type} | Sector Trend Analysis"
+        
+        body = f"""**🎓 Institution:** {lead.institution}
+
+**📡 Signal Insight:**
+{lead.opportunity_summary}
+
+**🏷️ Engagement Potential:** {lead.engagement_tier} – {ENGAGEMENT_TIERS.get(lead.engagement_tier, 'Trend monitoring')}
+
+**💡 Suggested Action:**
+{lead.suggested_action}
+
+**🔗 Sources:**
+{sources_text}
+
+**📅 Date Identified:** {lead.date_identified}
+**📌 Notes:**
+{lead.notes}
+Lead Type: {lead.lead_type.lower()}
+
+---
+Generated by Higher Ed Lead Generation System
+Processed at: {current_date}
+Lead ID: {lead.lead_id}
+---"""
+    else:
+        # Standard institution-specific lead format
+        subject = f"🧠 New Lead Identified: {lead.institution} | {lead.lead_type} | {lead.engagement_tier}"
+        
+        body = f"""**🎓 Institution:** {lead.institution}
 
 **🔍 Opportunity Summary:**
 {lead.opportunity_summary}

@@ -56,5 +56,39 @@
     "lead_type": "AI/Data",
     "notes": "Institution-specific analysis from 3 sources. Confidence: 0.70",
     "lead_id": "26e8d12f520c"
+  },
+  {
+    "institution": "❓ No specific institution identified",
+    "opportunity_summary": "The articles highlight a trend towards increased complexity in cloud environments within higher education institutions, driven by decentralized purchasing and implementation of hybrid and multicloud solutions. This complexity necessitates the adoption of FinOps practices to optimize cloud costs and improve efficiency across academic and administrative divisions. Higher education institutions may face financial pressures due to inefficient cloud resource management. By adopting FinOps, institutions can achieve cost savings and enhance collaboration across departments, ensuring more sustainable IT operations and potentially freeing up budget for other critical investments.",
+    "engagement_tier": "Exploratory",
+    "suggested_action": "Brief internal review: Does this signal align with existing Dynamic Campus services? Could it affect existing clients or near-future opportunities?",
+    "sources": [
+      {
+        "title": "Tennessee Lawsuit Puts HSIs’ Fate on the Line",
+        "url": "https://www.insidehighered.com/news/government/politics-elections/2025/06/13/tenn-lawsuit-puts-hispanic-servings-fate-line"
+      },
+      {
+        "title": "Tulane Environmentalist Resigns Amid Research ‘Gag Order’",
+        "url": "https://www.insidehighered.com/news/faculty-issues/academic-freedom/2025/06/13/tulane-environmentalist-resigns-amid-research-gag"
+      },
+      {
+        "title": "A More Structured Cloud Is a More Cost-Effective Cloud",
+        "url": "https://edtechmagazine.com/higher/article/2025/06/more-structured-cloud-more-cost-effective-cloud"
+      },
+      {
+        "title": "Q&A: Meeting the Demands of High-Performance Research Computing in Higher Ed",
+        "url": "https://edtechmagazine.com/higher/article/2025/06/qa-meeting-demands-high-performance-research-computing-higher-ed"
+      },
+      {
+        "title": "AI Ethics in Higher Education: How Schools Are Proceeding",
+        "url": "https://edtechmagazine.com/higher/article/2025/06/ai-ethics-higher-education-how-schools-are-proceeding-perfcon"
+      }
+    ],
+    "date_identified": "06/13/2025",
+    "confidence_score": 0.7,
+    "lead_type": "Signal",
+    "notes": "This is a fallback signal with no identified institution. Confidence: 0.70",
+    "lead_id": "eed8a4f0f0eb",
+    "is_fallback": true
   }
 ]
