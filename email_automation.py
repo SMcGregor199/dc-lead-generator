@@ -125,7 +125,7 @@ Best regards,
 Your Campus Whisperer Bot 🤖
 
 ---
-This email was sent automatically via Python script running on Replit.
+This email was sent automatically via Python script designed by Shayne McGregor (Future Director of Innovation / Chief Innovation Officer / Head of Innovation) running on Replit.
 Sent at: {now_eastern.strftime("%Y-%m-%d %H:%M:%S %Z")}
 """
 
