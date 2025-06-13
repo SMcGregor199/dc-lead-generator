@@ -1,0 +1,49 @@
+PROJECT CONTEXT:  
+You're maintaining and expanding an AI-powered Python application that:
+
+1. Pulls higher education tech-related content from multiple sources.
+2. Summarizes articles and job posts using GPT.
+3. Cross-references content to generate actionable IT service leads.
+4. Emails a summary to the user daily at 7AM.
+
+YOUR TASK:  
+Audit, clean up, and expand this application based on the following instructions:
+
+STEP 1 – Feed Validation & Cleanup:  
+- Test all URLs in the RSS_FEEDS array for reliability (404s, timeouts).
+- Replace or remove non-working feeds.
+- Make sure articles are randomly selected per run.
+
+STEP 2 – Code Quality Review:  
+- Remove unused or outdated files.
+- Rename files for clarity.
+- Secure all secrets (API keys, email credentials).
+- Add fallback logic if feeds or GPT summarization fail.
+- Minimize unnecessary API calls or inefficient loops.
+
+STEP 3 – Expand Cross-Referencing Capabilities:  
+- Add new source categories:
+  - Official university press releases
+  - Strategic planning documents (.edu)
+  - Conference speaker lineups
+  - Federal IT grant announcements
+  - Broader tech media filtered by higher-ed + digital transformation keywords
+
+STEP 4 – Integrate Lead Qualification Logic:  
+Embed the following logic:
+
+> Do not generate a lead from a single article or job posting. A valid lead must be supported by at least 3 distinct sources. At least one must mention a specific institution, and the others must provide supporting signals of a digital transformation, CIO hiring, ERP implementation, or IR/BI needs.
+
+Each lead must:
+- Include a summary (3–5 sentences)
+- Mention how the company (Dynamic Campus) could help
+- Cite all sources
+- Be tagged by engagement tier (small, medium, recurring, full IT outsource)
+
+FINAL OUTPUT:  
+Prepare a functioning version of the application that:
+- Fetches, validates, and summarizes content
+- Applies the lead scoring rules above
+- Sends an email to the user with qualified leads and all cited sources
+
+BONUS: Suggest any additional refinements or tools to improve performance or reliability.

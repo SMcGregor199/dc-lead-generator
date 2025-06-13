@@ -1,0 +1,98 @@
+# 🧠 AI Agent: Higher Ed Lead Generation System
+
+## 🎯 Objective
+Identify and deliver **genuine, tech-relevant opportunities** for Dynamic Campus to provide digital transformation services to higher education institutions. Each day at **7AM**, scan multiple data sources, synthesize relevant findings, and send a **well-formatted email lead** to the internal team.
+
+---
+
+## 📚 Source Types to Monitor
+
+### 1. Higher Education-Specific Sources
+- Inside Higher Ed
+- EdTech Magazine (Higher Ed section)
+- Higher Ed Dive
+- EDUCAUSE Review
+- The Chronicle of Higher Education (RSS-verified)
+- Individual university press rooms
+
+### 2. Broader News Outlets (Tech-Filtered)
+Only extract **higher ed tech-relevant** stories:
+- The New York Times (Education or Tech)
+- Wired (AI, EdTech)
+- Forbes (Education Technology)
+- Fast Company (Innovation, Higher Ed)
+- Bloomberg (Higher Ed + Tech)
+
+### 3. Job Postings and Executive Appointments
+- Google Jobs (scrape for CIO, CTO, CDO, VP Digital Transformation)
+- University hiring boards
+- Executive search firm announcements
+
+### 4. White Papers, Press Releases, RFPs
+- EDUCAUSE Library
+- University procurement portals
+- Newswire announcements about system transitions, breaches, etc.
+
+---
+
+## 🧠 How to Determine a Lead
+
+A valid **lead** must meet the following criteria:
+
+1. **Triangulated Context**: Minimum of 3 credible sources that reinforce or clarify each other.
+   - One must be institution-specific.
+   - Others may be sectoral, regional, or cultural, but **must connect back** to the institution in a meaningful way.
+
+2. **Tech-Relevance**: Opportunity should involve:
+   - ERP modernization
+   - IT org changes
+   - Cybersecurity issues or policy shifts
+   - AI/data governance
+   - LMS/CRM enhancements
+   - Institutional research or analytics transformation
+
+3. **Time Sensitivity**:
+   - Appointments, public breaches, or sudden policy changes must be tagged as “Fresh Leads”
+
+4. **Client Status**:
+   - Exclude current Dynamic Campus clients
+   - Don’t resubmit a past lead unless 6+ months have passed and context has changed
+
+---
+
+## 📧 Email Output Format
+
+**Subject Line:**  
+🧠 New Lead Identified: {{Institution Name}} | {{Lead Type}} | {{Engagement Tier}}
+
+**Body:**
+
+**🎓 Institution:** {{Institution Name}}  
+**🔍 Opportunity Summary:**  
+{{3–5 sentence explanation: What’s happening, why it matters, and how it's actionable.}}
+
+**🏷️ Engagement Tier:** {{Small | Medium | Recurring | Full Outsourcing}}  
+**💡 Suggested Action:**  
+{{Concise strategic recommendation for Dynamic Campus.}}
+
+**🔗 Sources:**  
+- [Source 1 Title](URL)  
+- [Source 2 Title](URL)  
+- [Source 3 Title](URL)
+
+**📅 Date Identified:** {{MM/DD/YYYY}}  
+**📌 Notes:**  
+{{AI-generated nuance, confidence score, or data limitations.}}
+
+---
+
+## 🛡️ System Constraints and Best Practices
+
+- **No single-source leads** (e.g. a lone job posting)
+- Validate RSS stability (check for 404s or connection timeouts)
+- Randomize articles to avoid repetition
+- Avoid hardcoding sensitive data (e.g. OpenAI keys)
+- Implement fallback logic for GPT or feed failure
+
+---
+
