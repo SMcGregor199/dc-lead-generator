@@ -29,13 +29,28 @@ import argparse
 LEADS_DATABASE_FILE = 'higher_ed_leads.json'
 CLIENTS_DATABASE_FILE = 'dynamic_campus_clients.json'
 
+# NOTE: Dynamic Campus should define its own tier classification rules before going to production.
+ENGAGEMENT_TIER_RULES = {
+    "Small": ["LMS update", "one-time website rebuild", "small upgrade", "single system", "pilot project"],
+    "Medium": ["ERP implementation", "AI governance", "cloud migration", "cybersecurity assessment", "data governance"],
+    "Recurring": ["institutional research modernization", "security audits", "CRM lifecycle tracking", "ongoing support", "managed services"],
+    "Full Outsourcing": ["entire IT department management", "complete infrastructure overhaul", "full digital transformation"],
+}
+
+# NOTE: These keywords represent Dynamic Campus services. This list must be reviewed and finalized before production use.
+DC_SERVICE_KEYWORDS = [
+    "ERP", "AI governance", "cybersecurity", "data governance", "LMS", "CRM", "institutional research",
+    "cloud migration", "digital transformation", "IT infrastructure", "security audit", "compliance",
+    "analytics", "business intelligence", "student information system", "enrollment management"
+]
+
 @dataclass
 class LeadOpportunity:
     """Data class for lead opportunities"""
     institution: str
     opportunity_summary: str
     engagement_tier: str  # Small | Medium | Recurring | Full Outsourcing | Exploratory
-    suggested_action: str
+    potential_contacts: List[Dict[str, str]]  # [{"name": "", "title": "", "email": "", "source": ""}]
     sources: List[Dict[str, str]]  # [{"title": "", "url": ""}]
     date_identified: str
     confidence_score: float
@@ -43,6 +58,7 @@ class LeadOpportunity:
     notes: str
     lead_id: str
     is_fallback: bool = False  # True for Signal Insights
+    suggested_action: str = ""  # Deprecated, maintained for backward compatibility
 
 # RSS Feeds for lead generation
 HIGHER_ED_FEEDS = [
@@ -208,6 +224,102 @@ Text: {text[:2000]}"""
         print(f"Error extracting institutions: {e}")
         return []
 
+def calculate_engagement_tier(opportunity_summary, sources_text):
+    """Calculate engagement tier based on opportunity content and configurable rules"""
+    # NOTE: Dynamic Campus should define its own tier classification rules before going to production.
+    
+    combined_text = (opportunity_summary + " " + sources_text).lower()
+    
+    # Count matches for each tier
+    tier_scores = {}
+    for tier, keywords in ENGAGEMENT_TIER_RULES.items():
+        score = sum(1 for keyword in keywords if keyword.lower() in combined_text)
+        if score > 0:
+            tier_scores[tier] = score
+    
+    # Return tier with highest score, default to Medium if no matches
+    if tier_scores:
+        best_tier = None
+        best_score = 0
+        for tier, score in tier_scores.items():
+            if score > best_score:
+                best_score = score
+                best_tier = tier
+        return best_tier if best_tier else "Medium"
+    return "Medium"
+
+def calculate_confidence_score(opportunity_summary, sources_text):
+    """Calculate confidence score based on Dynamic Campus service keyword overlap"""
+    # NOTE: These keywords represent Dynamic Campus services. This list must be reviewed and finalized before production use.
+    
+    combined_text = (opportunity_summary + " " + sources_text).lower()
+    
+    # Count keyword matches
+    keyword_matches = sum(1 for keyword in DC_SERVICE_KEYWORDS if keyword.lower() in combined_text)
+    
+    # Calculate base confidence (0.3 to 0.9 range)
+    base_confidence = min(0.9, 0.3 + (keyword_matches * 0.1))
+    
+    # Boost confidence if multiple sources mention similar themes
+    if keyword_matches >= 3:
+        base_confidence = min(0.95, base_confidence + 0.1)
+    
+    return round(base_confidence, 2)
+
+def extract_potential_contacts(institution, sources):
+    """Extract potential contacts from sources or generate likely contact types"""
+    contacts = []
+    
+    # Try to extract contacts from source content
+    for source in sources[:3]:  # Check top 3 sources
+        try:
+            if 'url' in source:
+                # Attempt to extract content and look for contact information
+                downloaded = trafilatura.fetch_url(source['url'])
+                if downloaded:
+                    content = trafilatura.extract(downloaded)
+                    if content:
+                        # Look for common IT leadership titles
+                        content_lower = content.lower()
+                        if any(title in content_lower for title in ['cio', 'chief information officer', 'it director', 'vp technology']):
+                            # Try to extract names near these titles (simplified extraction)
+                            lines = content.split('\n')
+                            for i, line in enumerate(lines):
+                                line_lower = line.lower()
+                                if any(title in line_lower for title in ['cio', 'chief information officer', 'it director']):
+                                    # Look for names in this line or nearby lines
+                                    potential_name = line.strip()
+                                    if len(potential_name) < 100:  # Reasonable name length
+                                        contacts.append({
+                                            "name": potential_name,
+                                            "title": "IT Leadership",
+                                            "email": "",
+                                            "source": f"Extracted from {source['title']}"
+                                        })
+                                        break
+        except:
+            continue
+    
+    # If no specific contacts found, provide common higher ed IT roles
+    if not contacts:
+        common_roles = [
+            {"name": "", "title": "Chief Information Officer (CIO)", "email": "", "source": f"{institution} leadership directory"},
+            {"name": "", "title": "VP of Information Technology", "email": "", "source": f"{institution} executive team"},
+            {"name": "", "title": "Director of IT Services", "email": "", "source": f"{institution} IT department"}
+        ]
+        contacts.extend(common_roles[:2])  # Add top 2 common roles
+    
+    # If still no contacts, add fallback message
+    if not contacts:
+        contacts.append({
+            "name": "No direct contacts found",
+            "title": "Recommend searching university leadership directory or executive board page",
+            "email": "",
+            "source": "Contact research needed"
+        })
+    
+    return contacts[:3]  # Return max 3 contacts
+
 def generate_signal_insight(articles_data):
     """Generate a Signal Insight fallback when no specific institutions are identified"""
     client = get_openai_client()
@@ -283,14 +395,20 @@ If no clear trend emerges, respond:
                 institution="❓ No specific institution identified",
                 opportunity_summary=trend_summary,
                 engagement_tier="Exploratory",
-                suggested_action=suggested_action,
+                potential_contacts=[{
+                    "name": "No direct contacts found",
+                    "title": "Sector-wide trend - no specific institution contacts",
+                    "email": "",
+                    "source": "Signal insight analysis"
+                }],
                 sources=sources[:5],
                 date_identified=datetime.now().strftime('%m/%d/%Y'),
                 confidence_score=result['confidence_score'],
                 lead_type="Signal",
                 notes=f"This is a fallback signal with no identified institution. Confidence: {result['confidence_score']:.2f}",
                 lead_id=generate_lead_id("signal_insight", "fallback"),
-                is_fallback=True
+                is_fallback=True,
+                suggested_action=suggested_action
             )
             
             print(f"Generated Signal Insight fallback with confidence: {result['confidence_score']:.2f}")
@@ -434,18 +552,27 @@ Provide a 1-2 sentence strategic recommendation."""
                 else:
                     suggested_action = f"Contact {institution} leadership to discuss digital transformation opportunities."
                 
+                # Extract potential contacts for this institution
+                potential_contacts = extract_potential_contacts(institution, sources[:3])
+                
+                # Calculate engagement tier and confidence using new logic
+                sources_text = " ".join([s.get('title', '') + " " + s.get('summary', '') for s in sources[:3]])
+                calculated_tier = calculate_engagement_tier(analysis_result['opportunity_summary'], sources_text)
+                calculated_confidence = calculate_confidence_score(analysis_result['opportunity_summary'], sources_text)
+                
                 lead = LeadOpportunity(
                     institution=institution,
                     opportunity_summary=analysis_result['opportunity_summary'],
-                    engagement_tier=analysis_result['engagement_tier'],
-                    suggested_action=suggested_action,
+                    engagement_tier=calculated_tier,
+                    potential_contacts=potential_contacts,
                     sources=sources[:5],  # Limit to 5 sources
                     date_identified=datetime.now().strftime('%m/%d/%Y'),
-                    confidence_score=analysis_result['confidence_score'],
+                    confidence_score=calculated_confidence,
                     lead_type=analysis_result['lead_type'],
-                    notes=f"Institution-specific analysis from {len(sources)} sources. Confidence: {analysis_result['confidence_score']:.2f}",
+                    notes=f"Institution-specific analysis from {len(sources)} sources. Calculated confidence: {calculated_confidence:.2f}",
                     lead_id=generate_lead_id(institution, analysis_result['lead_type']),
-                    is_fallback=False
+                    is_fallback=False,
+                    suggested_action=suggested_action
                 )
                 
                 processed_leads.append(lead)
@@ -618,7 +745,6 @@ def format_email_body(lead):
     # Escape AI-generated content to prevent HTML injection
     institution = html.escape(lead.institution)
     opportunity_summary = html.escape(lead.opportunity_summary).replace('\n', '<br>')
-    suggested_action = html.escape(lead.suggested_action).replace('\n', '<br>')
     notes = html.escape(lead.notes).replace('\n', '<br>')
     
     # Format sources as HTML links
@@ -627,6 +753,22 @@ def format_email_body(lead):
         title = html.escape(source['title'][:60] + "..." if len(source['title']) > 60 else source['title'])
         url = html.escape(source['url'])
         sources_html += f"&bull; <a href='{url}'>{title}</a><br>"
+    
+    # Format potential contacts
+    contacts_html = ""
+    for contact in lead.potential_contacts[:3]:
+        name = html.escape(contact.get('name', 'N/A'))
+        title = html.escape(contact.get('title', 'N/A'))
+        email = html.escape(contact.get('email', ''))
+        source = html.escape(contact.get('source', ''))
+        
+        if name and name != "N/A" and name != "No direct contacts found":
+            contacts_html += f"&bull; <strong>{name}</strong> - {title}"
+            if email:
+                contacts_html += f" (<a href='mailto:{email}'>{email}</a>)"
+            contacts_html += f"<br><em>Source: {source}</em><br><br>"
+        else:
+            contacts_html += f"&bull; {title}<br><em>{source}</em><br><br>"
     
     if lead.is_fallback:
         # Signal Insight fallback format
@@ -641,8 +783,8 @@ def format_email_body(lead):
 
 <p><strong>🏷️ Engagement Potential:</strong> {lead.engagement_tier} – {html.escape(ENGAGEMENT_TIERS.get(lead.engagement_tier, 'Trend monitoring'))}</p>
 
-<p><strong>💡 Suggested Action:</strong><br>
-{suggested_action}</p>
+<p><strong>👥 Potential Contacts:</strong><br>
+{contacts_html}</p>
 
 <p><strong>🔗 Sources:</strong><br>
 {sources_html}</p>

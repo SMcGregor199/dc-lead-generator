@@ -1,0 +1,62 @@
+📌 PROJECT UPDATE: ENGAGEMENT TIER LOGIC + CONTACT ENRICHMENT
+
+I’m refining a higher ed lead generation system. The current implementation uses hardcoded engagement tiers (e.g., “Multi-phase implementation (50K–200K)”) and confidence scores, but these aren't yet calculated based on clear logic.
+
+### GOAL:
+Refactor the system so that engagement tier and confidence logic are configurable (currently placeholder logic is fine for testing), and replace the "Suggested Action" section with a list of potential contacts.
+
+---
+
+### ✅ Tasks
+
+1. **Engagement Tier Logic**
+   - Create a variable or dictionary called `ENGAGEMENT_TIER_RULES` at the top of `lead_generation_service.py`.
+   - Store default logic such as:
+     ```python
+     ENGAGEMENT_TIER_RULES = {
+         "Small": ["LMS update", "one-time website rebuild"],
+         "Medium": ["ERP implementation", "AI governance", "cloud migration"],
+         "Recurring": ["Institutional research modernization", "security audits", "CRM lifecycle tracking"],
+         "Full Outsourcing": ["entire IT department management"],
+     }
+     ```
+   - Add logic that inspects the opportunity summary and source content.
+   - Match keywords from the above to assign a default tier.
+   - Add a `# NOTE:` above this logic that says:
+     ```python
+     # NOTE: Dynamic Campus should define its own tier classification rules before going to production.
+     ```
+
+2. **Confidence Scoring Logic**
+   - Create a variable called `DC_SERVICE_KEYWORDS = [...]`
+   - Default contents might include:
+     ```python
+     DC_SERVICE_KEYWORDS = [
+         "ERP", "AI governance", "cybersecurity", "data governance", "LMS", "CRM", "institutional research"
+     ]
+     ```
+   - Confidence score should be based on overlap between these and the article content (e.g., cosine match or keyword hit count)
+   - Add a `# NOTE:` above this logic:
+     ```python
+     # NOTE: These keywords represent Dynamic Campus services. This list must be reviewed and finalized before production use.
+     ```
+
+3. **Replace Suggested Action with Potential Contacts**
+   - Remove or suppress the “Suggested Action” field in final email formatting.
+   - Add a new section: **Potential Contacts**
+   - Scrape or extract contact names and roles from the article sources if possible.
+   - If no contacts are available in the sources:
+     - Use web search, job boards, or tools like Clearbit/Hunter to locate likely roles (CIO, VP of IT, Provost, etc.)
+   - Display 2–3 possible contacts with names, titles, and (if possible) links or email addresses.
+   - If no contacts can be found, insert a fallback message:
+     ```
+     No direct contacts found. Recommend searching university leadership directory or executive board page.
+     ```
+
+4. **Update README.md**
+   - Briefly describe how the engagement tier and confidence systems work.
+   - Mention that the service keyword list and tier definitions are placeholders.
+
+---
+
+Once complete, I’ll test the updated lead summaries and ensure they reflect DC’s priorities more accurately.
