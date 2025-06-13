@@ -7,6 +7,7 @@ dependencies = [
     "beautifulsoup4>=4.13.4",
     "feedparser>=6.0.11",
     "markdown>=3.8",
+    "newspaper3k>=0.2.8",
     "openai>=1.86.0",
     "pytz>=2025.2",
     "requests>=2.32.4",

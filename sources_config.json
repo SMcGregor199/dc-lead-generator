@@ -1,0 +1,102 @@
+{
+  "news_sources": [
+    {
+      "name": "Inside Higher Ed",
+      "url": "https://www.insidehighered.com/rss.xml",
+      "type": "news",
+      "confidence": "high",
+      "last_verified": "2025-06-13",
+      "active": true
+    },
+    {
+      "name": "EdTech Magazine Higher Ed",
+      "url": "https://edtechmagazine.com/higher/rss.xml",
+      "type": "technology",
+      "confidence": "high",
+      "last_verified": "2025-06-13",
+      "active": true
+    },
+    {
+      "name": "Higher Ed Dive",
+      "url": "https://www.highereddive.com/feeds/",
+      "type": "news",
+      "confidence": "medium",
+      "last_verified": "2025-06-13",
+      "active": false,
+      "note": "Feed returns 404 errors"
+    },
+    {
+      "name": "The Chronicle of Higher Education",
+      "url": "https://www.chronicle.com/section/news/rss",
+      "type": "news",
+      "confidence": "high",
+      "last_verified": "2025-06-13",
+      "active": false,
+      "note": "Feed returns 404 errors"
+    },
+    {
+      "name": "EDUCAUSE Review",
+      "url": "https://er.educause.edu/articles/rss",
+      "type": "technology",
+      "confidence": "high",
+      "last_verified": "2025-06-13",
+      "active": false,
+      "note": "Feed returns 403 forbidden"
+    }
+  ],
+  "job_sources": [
+    {
+      "name": "HigherEdJobs",
+      "url": "https://www.higheredjobs.com/rss/",
+      "type": "jobs",
+      "confidence": "high",
+      "last_verified": "2025-06-13",
+      "active": true
+    },
+    {
+      "name": "MIT Careers",
+      "url": "https://careers.mit.edu/jobs/rss",
+      "type": "jobs",
+      "confidence": "high",
+      "last_verified": "2025-06-13",
+      "active": true,
+      "institution": "Massachusetts Institute of Technology"
+    },
+    {
+      "name": "UC San Diego Careers",
+      "url": "https://employment.ucsd.edu/staff-positions/rss",
+      "type": "jobs",
+      "confidence": "high",
+      "last_verified": "2025-06-13",
+      "active": true,
+      "institution": "University of California, San Diego"
+    },
+    {
+      "name": "Duke University Careers",
+      "url": "https://duke.wd1.myworkdayjobs.com/Staff_Career_Pages/jobs.rss",
+      "type": "jobs",
+      "confidence": "high",
+      "last_verified": "2025-06-13",
+      "active": true,
+      "institution": "Duke University"
+    },
+    {
+      "name": "Northwestern Careers",
+      "url": "https://careers.northwestern.edu/jobs.rss",
+      "type": "jobs",
+      "confidence": "high",
+      "last_verified": "2025-06-13",
+      "active": true,
+      "institution": "Northwestern University"
+    },
+    {
+      "name": "Harvard University Careers",
+      "url": "https://harvard.wd1.myworkdayjobs.com/staff/jobs.rss",
+      "type": "jobs",
+      "confidence": "high",
+      "last_verified": "2025-06-13",
+      "active": true,
+      "institution": "Harvard University"
+    }
+  ]
+}

@@ -15,58 +15,14 @@ import time
 from datetime import datetime
 from openai import OpenAI
 from urllib.parse import urlparse
+from source_logger import log_broken_feed, get_active_sources, mark_source_verified, mark_source_broken
+from newspaper import Article
+import newspaper
 
-# Higher Ed news RSS feeds - verified working feeds only
-RSS_FEEDS = [
-    {
-        'name': 'Inside Higher Ed',
-        'url': 'https://www.insidehighered.com/rss.xml',
-        'description': 'Leading source for higher education news',
-        'tech_focused': False
-    },
-    {
-        'name': 'Educause',
-        'url': 'https://er.educause.edu/channels/rss',
-        'description': 'Higher education technology news',
-        'tech_focused': True
-    },
-    {
-        'name': 'EdTech Magazine Higher Ed',
-        'url': 'https://edtechmagazine.com/higher/rss.xml',
-        'description': 'Technology in higher education',
-        'tech_focused': True
-    },
-    {
-        'name': 'Higher Ed Dive',
-        'url': 'https://feeds.feedburner.com/HigherEducationDive',
-        'description': 'Higher education industry news',
-        'tech_focused': False
-    },
-    {
-        'name': 'Faculty Focus',
-        'url': 'https://www.facultyfocus.com/feed/',
-        'description': 'Teaching strategies & trends in higher ed',
-        'tech_focused': False
-    },
-    {
-        'name': 'The PIE News',
-        'url': 'https://thepienews.com/feed/',
-        'description': 'Global news on international education',
-        'tech_focused': False
-    },
-    {
-        'name': 'Ruffalo Noel Levitz (RNL) Blog',
-        'url': 'https://www.ruffalonl.com/blog/feed/',
-        'description': 'Enrollment, retention, and fundraising trends',
-        'tech_focused': False
-    },
-    {
-        'name': 'The Guardian Higher Education',
-        'url': 'https://www.theguardian.com/education/higher-education/rss',
-        'description': 'Higher education news from The Guardian',
-        'tech_focused': False
-    }
-]
+# Load RSS feeds from centralized configuration
+def load_news_feeds():
+    """Load active news feeds from sources configuration"""
+    return get_active_sources('news_sources')
 
 # Technology keywords for filtering non-tech-focused feeds
 TECH_KEYWORDS = [

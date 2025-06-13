@@ -1,0 +1,56 @@
+🔧 PROJECT UPGRADE INSTRUCTION — SOURCE INTAKE IMPROVEMENTS
+
+You're maintaining and expanding the AI-powered Python project `dc-lead-generator`.
+
+Please implement the following improvements to the source intake logic:
+
+---
+
+1. **Replace fragile Google job links**  
+Google Jobs links currently used in the repo are session-based and unreliable. Replace them with more stable sources like:
+- HigherEdJobs (https://www.higheredjobs.com/rss/)
+- Chronicle Jobs
+- LinkedIn Jobs API (optional)
+- Existing Workday job feeds from MIT, UCSD, Duke, etc.
+
+---
+
+2. **Log broken or dead feeds**  
+Add error-handling to both `news_service.py` and `rss_health_monitor.py`. If an RSS feed fails or returns no entries, log it to a `broken_sources.log` file for future auditing.
+
+Suggested pattern:
+
+```python
+try:
+    feed = feedparser.parse(url)
+    if not feed.entries:
+        log_broken_feed(url)
+except Exception as e:
+    log_broken_feed(url, str(e))
+```
+
+---
+
+3. **Create a `sources_config.json` file**  
+Store all source URLs in a JSON config with the following structure:
+
+```json
+{
+  "name": "Inside Higher Ed",
+  "url": "https://www.insidehighered.com/rss.xml",
+  "type": "news",
+  "confidence": "high",
+  "last_verified": "2025-06-12"
+}
+```
+
+Update `rss_health_monitor.py`, `news_service.py`, and `feed_tester.py` to pull from this new config file.
+
+---
+
+4. **(Optional) Enhance article text scraping**  
+Some RSS feeds only provide summaries. If possible, use tools like `newspaper3k`, `Readability`, or `BeautifulSoup` to fetch and extract the full article body from the feed's `link`.
+
+---
+
+The goal is to improve both reliability and quality of the sources feeding into the lead generator. Let me know if you need mock data or example JSON files.
