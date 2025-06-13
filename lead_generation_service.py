@@ -722,7 +722,7 @@ def identify_new_leads():
         'institution': best_lead.institution,
         'opportunity_summary': best_lead.opportunity_summary,
         'engagement_tier': best_lead.engagement_tier,
-        'suggested_action': best_lead.suggested_action,
+        'potential_contacts': best_lead.potential_contacts,
         'sources': best_lead.sources,
         'date_identified': best_lead.date_identified,
         'confidence_score': best_lead.confidence_score,
@@ -819,8 +819,8 @@ Lead ID: {lead.lead_id}
 <p><strong>🏷️ Engagement Tier:</strong> {lead.engagement_tier}<br>
 <em>{engagement_desc}</em></p>
 
-<p><strong>💡 Suggested Action:</strong><br>
-{suggested_action}</p>
+<p><strong>👥 Potential Contacts:</strong><br>
+{contacts_html}</p>
 
 <p><strong>🔗 Sources:</strong><br>
 {sources_html}</p>

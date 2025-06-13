@@ -1,28 +1,61 @@
-# Campus Whisperer - Email Automation System
+# Higher Education Lead Generation System
 
-A Python-powered email automation tool that sends intelligent, personalized daily morning emails with AI-generated higher education news summaries.
+An AI-powered lead generation system that identifies genuine technology opportunities for Dynamic Campus by analyzing higher education news sources and institutional developments.
 
 ## Key Features
 
-- 📧 Automated daily emails at 7:00 AM Eastern Time
-- 🤖 AI-powered news summarization using OpenAI GPT-4o
-- 📰 Real-time RSS feed parsing from verified Higher Ed sources
-- 🔐 Secure credential management via environment variables
-- 🛡️ Enterprise-grade error handling and retry logic
-- 📊 Comprehensive logging and monitoring
-- 🌐 Gmail SMTP with SSL encryption (port 465)
+- 🧠 AI-powered lead identification from higher education news
+- 🎯 Institution-specific opportunity analysis with named entity recognition
+- 📊 Configurable engagement tier classification system
+- 👥 Automated contact enrichment and potential contact identification
+- 📧 HTML-formatted daily email reports at 7:00 AM Eastern Time
+- 🔗 Real-time RSS feed analysis from verified Higher Ed sources
+- 🛡️ Client filtering to avoid duplicate outreach to current customers
+- 📈 Confidence scoring based on Dynamic Campus service alignment
 
 ## Project Structure
 
 ### Core Files
-- `email_automation.py` - Unified email service (immediate and scheduled modes)
-- `news_service.py` - RSS feed parsing and OpenAI summarization
-- `feed_tester.py` - RSS feed validation utility
-- `log.txt` - Timestamped success logs
+- `lead_generation_service.py` - Main lead generation system with AI analysis
+- `news_service.py` - RSS feed parsing and content extraction
+- `job_service.py` - Higher education job posting integration
+- `higher_ed_leads.json` - Persistent lead database
+- `dynamic_campus_clients.json` - Current client database for filtering
+- `log.txt` - Timestamped operation logs
 
-### Configuration
-- `pyproject.toml` - Python dependencies
-- `IMPROVEMENTS_SUMMARY.md` - Enhancement documentation
+### Configuration Files
+- `pyproject.toml` - Python dependencies and project metadata
+- `README.md` - System documentation and setup instructions
+
+## Engagement Tier Classification System
+
+The system uses configurable rules to classify opportunities into engagement tiers:
+
+### ENGAGEMENT_TIER_RULES
+- **Small**: LMS updates, website rebuilds, pilot projects, single system upgrades
+- **Medium**: ERP implementation, AI governance, cloud migration, cybersecurity assessments
+- **Recurring**: Security audits, managed services, ongoing institutional support
+- **Full Outsourcing**: Complete IT management, infrastructure overhauls, digital transformation
+
+*Note: Dynamic Campus should review and customize these tier definitions before production use.*
+
+## Confidence Scoring System
+
+Confidence scores (0.3-0.95) are calculated based on Dynamic Campus service keyword alignment:
+
+### DC_SERVICE_KEYWORDS
+- Core services: ERP, AI governance, cybersecurity, data governance, LMS, CRM
+- Extended services: Cloud migration, digital transformation, IT infrastructure
+- Specialized areas: Institutional research, analytics, business intelligence
+
+*Note: This keyword list represents Dynamic Campus services and should be finalized before production deployment.*
+
+## Contact Enrichment
+
+The system attempts to identify potential contacts through:
+1. **Source Content Analysis**: Extracts names and titles from article content
+2. **Common Higher Ed Roles**: Provides likely IT leadership positions when specific contacts aren't found
+3. **Fallback Guidance**: Directs to university leadership directories when no contacts are available
 
 ## Setup Instructions
 
