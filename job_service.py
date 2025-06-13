@@ -11,6 +11,7 @@ import time
 import os
 import json
 import hashlib
+import feedparser
 from datetime import datetime, timedelta
 from openai import OpenAI
 
@@ -241,78 +242,91 @@ def calculate_job_confidence_score(job_title, job_description, institution):
 
 def scrape_fresh_higher_ed_jobs():
     """
-    Scrape fresh higher education IT jobs using SerpAPI.
-    Replaces static job data with current opportunities.
+    Scrape fresh higher education IT jobs using stable RSS feeds.
+    Replaces fragile Google job links with reliable institutional sources.
     
     Returns:
         list: List of fresh job postings
     """
+    from source_logger import get_active_sources, mark_source_verified, mark_source_broken
+    
     try:
-        serpapi_key = os.environ.get('SERPAPI_KEY')
-        if not serpapi_key:
-            print("SERPAPI_KEY not found - using fallback job data")
+        # Load job sources from centralized configuration
+        job_sources = get_active_sources('job_sources')
+        
+        if not job_sources:
+            print("No active job sources found in configuration")
             return []
         
         fresh_jobs = []
         
-        for query in HIGHER_ED_JOB_QUERIES[:3]:  # Limit to 3 queries to avoid rate limits
+        for source in job_sources:
             try:
-                print(f"Searching jobs for: {query}")
+                source_name = source.get('name', 'Unknown')
+                source_url = source.get('url', '')
+                institution = source.get('institution', '')
                 
-                params = {
-                    'api_key': serpapi_key,
-                    'engine': 'google_jobs',
-                    'q': query,
-                    'hl': 'en',
-                    'gl': 'us',
-                    'chips': 'date_posted:month',  # Jobs from last month
-                    'num': 10
-                }
+                if not source_url:
+                    continue
                 
-                response = requests.get('https://serpapi.com/search', params=params, timeout=30)
+                print(f"Fetching jobs from: {source_name}")
+                
+                # Parse job RSS feed
+                response = requests.get(source_url, timeout=30, headers={
+                    'User-Agent': 'Higher Ed Lead Generation Job Scraper/1.0'
+                })
                 
                 if response.status_code == 200:
-                    data = response.json()
-                    jobs_results = data.get('jobs_results', [])
+                    feed = feedparser.parse(response.content)
                     
-                    for job in jobs_results:
-                        title = job.get('title', '')
-                        company = job.get('company_name', '')
-                        description = job.get('description', '')
-                        location = job.get('location', '')
+                    if not feed.entries:
+                        print(f"No job entries found in {source_name}")
+                        continue
+                    
+                    # Mark source as verified
+                    mark_source_verified(source_name, 'job_sources')
+                    
+                    for entry in feed.entries[:10]:  # Limit to 10 jobs per source
+                        title = entry.get('title', '')
+                        description = entry.get('description', '') or entry.get('summary', '')
+                        link = entry.get('link', '')
                         
-                        # Filter for higher education institutions
-                        if any(indicator in company.lower() for indicator in 
-                              ['university', 'college', 'institute', 'academy', 'school']):
+                        # Filter for IT leadership positions
+                        if any(keyword.lower() in title.lower() for keyword in IT_LEADERSHIP_TITLES):
                             
                             # Calculate confidence score
-                            confidence = calculate_job_confidence_score(title, description, company)
+                            confidence = calculate_job_confidence_score(title, description, institution or source_name)
                             
                             fresh_job = {
                                 'title': title,
-                                'company': company,
+                                'company': institution or source_name.replace(' Careers', ''),
                                 'summary': get_openai_summary(description),
-                                'description': description[:1000],  # Truncate for storage
-                                'location': location,
-                                'url': job.get('apply_link', ''),
-                                'source': 'SerpAPI Google Jobs',
+                                'description': description[:1000],
+                                'location': getattr(entry, 'location', ''),
+                                'url': link,
+                                'source': source_name,
                                 'confidence_score': confidence,
                                 'date_scraped': datetime.now().strftime('%Y-%m-%d'),
-                                'job_id': generate_job_id(title, company)
+                                'job_id': generate_job_id(title, institution or source_name)
                             }
                             
                             fresh_jobs.append(fresh_job)
-                            print(f"Found: {title} at {company} (confidence: {confidence:.2f})")
-                    
-                    time.sleep(2)  # Rate limiting
+                            print(f"Found: {title} at {fresh_job['company']} (confidence: {confidence:.2f})")
+                
                 else:
-                    print(f"SerpAPI request failed: {response.status_code}")
-                    
+                    error_msg = f"HTTP {response.status_code}"
+                    print(f"Failed to fetch {source_name}: {error_msg}")
+                    mark_source_broken(source_name, 'job_sources', error_msg)
+                
+                time.sleep(1)  # Rate limiting
+                
             except Exception as e:
-                print(f"Error processing query '{query}': {e}")
+                error_msg = str(e)
+                print(f"Error processing {source.get('name', 'unknown source')}: {error_msg}")
+                mark_source_broken(source.get('name', 'unknown'), 'job_sources', error_msg)
                 continue
         
-        print(f"Scraped {len(fresh_jobs)} fresh job postings")
+        print(f"Scraped {len(fresh_jobs)} fresh job postings from RSS feeds")
         return fresh_jobs
         
     except Exception as e:

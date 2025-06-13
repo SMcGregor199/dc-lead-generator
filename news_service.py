@@ -16,8 +16,13 @@ from datetime import datetime
 from openai import OpenAI
 from urllib.parse import urlparse
 from source_logger import log_broken_feed, get_active_sources, mark_source_verified, mark_source_broken
-from newspaper import Article
-import newspaper
+# Enhanced article extraction with newspaper3k
+try:
+    from newspaper import Article
+    NEWSPAPER_AVAILABLE = True
+except ImportError:
+    NEWSPAPER_AVAILABLE = False
+    print("newspaper3k not available - using trafilatura for article extraction")
 
 # Load RSS feeds from centralized configuration
 def load_news_feeds():
@@ -334,9 +339,12 @@ def get_daily_news_insight():
     """
     print("=== Fetching Daily Higher Ed Tech News Insight ===")
     
+    # Load feeds from centralized configuration
+    active_feeds = load_news_feeds()
+    
     # Separate tech-focused and general feeds
-    tech_feeds = [feed for feed in RSS_FEEDS if feed.get('tech_focused', False)]
-    general_feeds = [feed for feed in RSS_FEEDS if not feed.get('tech_focused', False)]
+    tech_feeds = [feed for feed in active_feeds if feed.get('type') == 'technology']
+    general_feeds = [feed for feed in active_feeds if feed.get('type') != 'technology']
     
     # First, search for tech articles in general feeds
     print("Searching for tech articles from general feeds...")
