@@ -108,7 +108,7 @@ ENGAGEMENT_TIERS = {
 }
 
 # Configuration for institution confidence threshold
-INSTITUTION_CONFIDENCE_THRESHOLD = 0.6
+INSTITUTION_CONFIDENCE_THRESHOLD = 0.4
 
 def get_openai_client():
     """Initialize OpenAI client"""
@@ -154,16 +154,20 @@ def generate_lead_id(institution, lead_type):
     combined = f"{institution.lower().strip()}{lead_type.lower()}{datetime.now().strftime('%Y%m%d')}"
     return hashlib.md5(combined.encode()).hexdigest()[:12]
 
-def is_duplicate_lead(institution, lead_type, existing_leads, days_threshold=180):
+def is_duplicate_lead(institution, lead_type, existing_leads, days_threshold=7):
     """Check if lead already exists within threshold"""
     cutoff_date = datetime.now() - timedelta(days=days_threshold)
     
     for lead in existing_leads:
         if (lead['institution'].lower() == institution.lower() and 
             lead['lead_type'] == lead_type):
-            lead_date = datetime.strptime(lead['date_identified'], '%m/%d/%Y')
-            if lead_date > cutoff_date:
-                return True
+            try:
+                lead_date = datetime.strptime(lead['date_identified'], '%m/%d/%Y')
+                if lead_date > cutoff_date:
+                    return True
+            except ValueError:
+                # Skip leads with invalid date formats
+                continue
     return False
 
 def is_current_client(institution, clients_list):
