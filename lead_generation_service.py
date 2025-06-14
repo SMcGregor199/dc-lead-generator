@@ -74,18 +74,23 @@ HIGHER_ED_FEEDS = [
     },
     {
         'name': 'Higher Ed Dive',
-        'url': 'https://www.highereddive.com/feeds/',
+        'url': 'https://www.highereddive.com/feeds/news/',
         'focus': 'general_higher_ed'
     },
     {
-        'name': 'The Chronicle of Higher Education',
-        'url': 'https://www.chronicle.com/section/news/rss',
-        'focus': 'general_higher_ed'
+        'name': 'Faculty Focus',
+        'url': 'https://www.facultyfocus.com/feed/',
+        'focus': 'general education from perspective of educucators'
     },
     {
-        'name': 'EDUCAUSE Review',
-        'url': 'https://er.educause.edu/articles/rss',
-        'focus': 'tech_specific'
+        'name': 'Higher Ed Jobs',
+        'url': 'https://www.higheredjobs.com/rss/articleFeed.cfm',
+        'focus': 'higher education with a focus on jobs'
+    },
+    {
+        'name': 'Higher Education Today',
+        'url': 'https://www.higheredtoday.org/feed/',
+        'focus': 'general higher education'
     }
 ]
 
@@ -875,7 +880,7 @@ def send_lead_email(lead):
         msg['Subject'] = subject
         msg['From'] = gmail_address
         msg['To'] = 'shayne.mcgregor@dynamiccampus.com'
-        msg['Cc'] = 'smcgregor@maryu.marywood.edu, jasmine.n.olivier@gmail.com'
+        msg['Cc'] = 'smcgregor@maryu.marywood.edu'
         
         # Attach HTML content
         html_part = MIMEText(html_body, 'html')

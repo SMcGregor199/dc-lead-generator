@@ -1,0 +1,89 @@
+Hello! I need your help refactoring an existing Python script, lead_generation_service.py. The goal is to remove hardcoded configuration values from the script and move them into a separate config.yaml file for easier management.Here are the step-by-step instructions:1. Create a config.yaml file:Please create a new file named config.yaml and populate it with the following configuration variables, which are currently hardcoded in the Python script. Use the structure below:# Configuration for the Higher Ed Lead Generation System
+
+# Email settings for sending lead notifications
+email_recipients:
+  to: 'shayne.mcgregor@dynamiccampus.com'
+  cc:
+    - 'smcgregor@maryu.marywood.edu'
+    - 'jasmine.n.olivier@gmail.com'
+
+# Rules for classifying the potential size of an engagement
+engagement_tier_rules:
+  Small:
+    - "LMS update"
+    - "one-time website rebuild"
+    - "small upgrade"
+    - "single system"
+    - "pilot project"
+  Medium:
+    - "ERP implementation"
+    - "AI governance"
+    - "cloud migration"
+    - "cybersecurity assessment"
+    - "data governance"
+  Recurring:
+    - "institutional research modernization"
+    - "security audits"
+    - "CRM lifecycle tracking"
+    - "ongoing support"
+    - "managed services"
+  Full Outsourcing:
+    - "entire IT department management"
+    - "complete infrastructure overhaul"
+    - "full digital transformation"
+
+# Keywords that map to our core services to help calculate lead confidence
+dc_service_keywords:
+  - "ERP"
+  - "AI governance"
+  - "cybersecurity"
+  - "data governance"
+  - "LMS"
+  - "CRM"
+  - "institutional research"
+  - "cloud migration"
+  - "digital transformation"
+  - "IT infrastructure"
+  - "security audit"
+  - "compliance"
+  - "analytics"
+  - "business intelligence"
+  - "student information system"
+  - "enrollment management"
+
+# RSS feeds to monitor for potential leads
+higher_ed_feeds:
+  - name: 'Inside Higher Ed'
+    url: 'https://www.insidehighered.com/rss.xml'
+    focus: 'general_higher_ed'
+  - name: 'EdTech Magazine Higher Ed'
+    url: 'https://edtechmagazine.com/higher/rss.xml'
+    focus: 'tech_specific'
+  - name: 'Higher Ed Dive'
+    url: 'https://www.highereddive.com/feeds/news/'
+    focus: 'general_higher_ed'
+  - name: 'Faculty Focus'
+    url: 'https://www.facultyfocus.com/feed/'
+    focus: 'general education from perspective of educucators'
+  - name: 'Higher Ed Jobs'
+    url: 'https://www.higheredjobs.com/rss/articleFeed.cfm'
+    focus: 'higher education with a focus on jobs'
+  - name: 'Higher Education Today'
+    url: 'https://www.higheredtoday.org/feed/'
+    focus: 'general higher education'
+2. Update the Python Script (lead_generation_service.py):Modify the script to perform the following actions:Add Imports: Add import yaml at the top of the file to handle the new configuration file. If PyYAML is not installed, please add a comment noting that pip install PyYAML is required.Create a Configuration Loader Function: Add a new function at the beginning of the script to load the config.yaml file.def load_config():
+    """Load configuration from config.yaml"""
+    try:
+        with open('config.yaml', 'r', encoding='utf-8') as f:
+            return yaml.safe_load(f)
+    except FileNotFoundError:
+        print("Error: config.yaml not found. Please create it.")
+        exit(1)
+    except Exception as e:
+        print(f"Error loading config.yaml: {e}")
+        exit(1)
+Load Config Globally: At the top level of the script, call this new function to load the configuration into a global variable.# Load configuration
+config = load_config()
+Replace Hardcoded Variables:Find the definitions for ENGAGEMENT_TIER_RULES, DC_SERVICE_KEYWORDS, and HIGHER_ED_FEEDS.Remove these hardcoded dictionaries and lists.Instead, assign them their values from the loaded config dictionary. For example: ENGAGEMENT_TIER_RULES = config['engagement_tier_rules'].Update the send_lead_email function:Locate the send_lead_email function.Find the lines that set the To and Cc fields of the email message.Modify these lines to use the email addresses from the loaded config object. For example:msg['To'] = config['email_recipients']['to']
+msg['Cc'] = ', '.join(config['email_recipients']['cc'])
+Please provide me with the complete, updated lead_generation_service.py file after you have applied all of these changes.
