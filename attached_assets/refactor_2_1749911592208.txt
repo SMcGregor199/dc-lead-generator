@@ -1,0 +1,118 @@
+Hello! I need your help refactoring my Python script, lead_generation_service.py, to improve its performance. The current script fetches articles from RSS feeds one by one, which is slow. I want to convert this process to be asynchronous, allowing it to fetch from all feeds concurrently.
+
+Here are the step-by-step instructions:
+
+1. Add New Imports:
+Please add the following imports to the top of the lead_generation_service.py file. Add a comment noting that aiohttp and aiohttp-retry need to be installed (pip install aiohttp aiohttp-retry).
+
+import asyncio
+import aiohttp
+from aiohttp_retry import RetryClient, ExponentialRetry
+
+2. Refactor the fetch_articles_for_lead_analysis Function:
+Replace the entire existing fetch_articles_for_lead_analysis function with the new, fully asynchronous version below. This new version uses aiohttp to make concurrent requests and trafilatura in a thread-safe way.
+
+async def fetch_articles_for_lead_analysis():
+    """Fetch articles from multiple sources concurrently for lead analysis"""
+    print("=== Fetching Articles for Lead Analysis (Async) ===")
+    all_articles = []
+    cutoff_date = datetime.now() - timedelta(days=7)
+
+    async def fetch_and_process_feed(session, feed):
+        """Fetches and processes a single RSS feed."""
+        try:
+            print(f"Fetching from {feed['name']}...")
+            async with session.get(feed['url'], timeout=15) as response:
+                response.raise_for_status()
+                content = await response.read()
+                
+                # feedparser is synchronous, run it in an executor to avoid blocking
+                parsed_feed = await asyncio.to_thread(feedparser.parse, content)
+
+                if not parsed_feed.entries:
+                    print(f"No entries found in {feed['name']}")
+                    return []
+
+                feed_articles = []
+                for entry in parsed_feed.entries[:10]: # Check last 10 articles
+                    if hasattr(entry, 'published_parsed') and entry.published_parsed:
+                        pub_date = datetime(*entry.published_parsed[:6])
+                        if pub_date > cutoff_date:
+                            # trafilatura is also synchronous, run in executor
+                            downloaded = await asyncio.to_thread(trafilatura.fetch_url, entry.link)
+                            if downloaded:
+                                content_text = await asyncio.to_thread(trafilatura.extract, downloaded)
+                                if content_text and len(content_text) > 500:
+                                    content_lower = f"{entry.title} {content_text}".lower()
+                                    tech_relevant = any(
+                                        any(keyword.lower() in content_lower for keyword in keywords)
+                                        for keywords in LEAD_KEYWORDS.values()
+                                    )
+                                    if tech_relevant or feed['focus'] == 'tech_specific':
+                                        feed_articles.append({
+                                            'title': entry.title,
+                                            'url': entry.link,
+                                            'summary': content_text[:1000],
+                                            'source': feed['name'],
+                                            'focus': feed['focus']
+                                        })
+                                        print(f"Added tech-relevant article: {entry.title[:60]}...")
+                return feed_articles
+        except Exception as e:
+            print(f"Error fetching from {feed['name']}: {e}")
+            return []
+
+    retry_options = ExponentialRetry(attempts=3)
+    async with aiohttp.ClientSession() as http_session:
+        retry_client = RetryClient(client_session=http_session, retry_options=retry_options)
+        tasks = [fetch_and_process_feed(retry_client, feed) for feed in HIGHER_ED_FEEDS]
+        results = await asyncio.gather(*tasks)
+        
+        for article_list in results:
+            all_articles.extend(article_list)
+
+    print(f"Collected {len(all_articles)} tech-relevant articles for analysis")
+    return all_articles
+
+3. Update the Function Call Chain to be Asynchronous:
+Because fetch_articles_for_lead_analysis is now an async function, any function that calls it must also be async and use await. Please make the following modifications:
+
+identify_new_leads:
+
+Change its definition to async def identify_new_leads():
+
+Change the line articles = fetch_articles_for_lead_analysis() to articles = await fetch_articles_for_lead_analysis()
+
+run_daily_lead_generation:
+
+Change its definition to async def run_daily_lead_generation():
+
+Change the line lead = identify_new_leads() to lead = await identify_new_leads()
+
+test_lead_generation:
+
+Change its definition to async def test_lead_generation():
+
+Change the line lead = identify_new_leads() to lead = await identify_new_leads()
+
+4. Update the main Function to Run the Async Event Loop:
+The main function is the entry point and must be updated to execute the top-level asynchronous functions (run_daily_lead_generation or test_lead_generation). Replace the entire existing main function with this new version:
+
+def main():
+    """Main function with mode selection"""
+    parser = argparse.ArgumentParser(description='Higher Ed Lead Generation System')
+    parser.add_argument('--mode', choices=['immediate', 'schedule', 'test'], 
+                       default='immediate', help='Execution mode')
+    
+    args = parser.parse_args()
+    
+    if args.mode == 'test':
+        asyncio.run(test_lead_generation())
+    elif args.mode == 'immediate':
+        asyncio.run(run_daily_lead_generation())
+    elif args.mode == 'schedule':
+        # NOTE: The scheduler part remains synchronous as `schedule` library is not async-native.
+        # This is an acceptable hybrid approach.
+        run_scheduler()
+
+Please provide me with the complete, updated lead_generation_service.py file after you have applied all these changes. The run_scheduler function can remain synchronous as it handles its own loop.
