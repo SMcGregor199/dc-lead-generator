@@ -24,10 +24,12 @@ from dataclasses import dataclass
 from typing import List, Dict, Optional
 import schedule
 import argparse
+import yaml
 
 # File to store persistent lead database
 LEADS_DATABASE_FILE = 'higher_ed_leads.json'
 CLIENTS_DATABASE_FILE = 'dynamic_campus_clients.json'
+CONFIG_FILE = 'config.yaml'
 
 # NOTE: Dynamic Campus should define its own tier classification rules before going to production.
 ENGAGEMENT_TIER_RULES = {
@@ -115,9 +117,19 @@ ENGAGEMENT_TIERS = {
 # Configuration for institution confidence threshold
 INSTITUTION_CONFIDENCE_THRESHOLD = 0.4
 
+def load_config():
+    """Load configuration from YAML file"""
+    try:
+        with open(CONFIG_FILE, 'r') as f:
+            return yaml.safe_load(f)
+    except Exception as e:
+        print(f"Error loading config file: {e}")
+        return {}
+
 def get_openai_client():
     """Initialize OpenAI client"""
-    api_key = os.environ.get('OPENAI_API_KEY')
+    config = load_config()
+    api_key = config.get('openai_api_key') or os.environ.get('OPENAI_API_KEY')
     if not api_key:
         print("Warning: OPENAI_API_KEY not found")
         return None
@@ -162,7 +174,7 @@ def generate_lead_id(institution, lead_type):
 def is_duplicate_lead(institution, lead_type, existing_leads, days_threshold=7):
     """Check if lead already exists within threshold"""
     cutoff_date = datetime.now() - timedelta(days=days_threshold)
-    
+
     for lead in existing_leads:
         if (lead['institution'].lower() == institution.lower() and 
             lead['lead_type'] == lead_type):
@@ -187,7 +199,7 @@ def extract_institutions_from_text(text):
     client = get_openai_client()
     if not client:
         return []
-    
+
     try:
         prompt = f"""Extract all higher education institution names from this text. Return only official institution names that are specifically mentioned, one per line. Do not include generic references like "universities" or "colleges".
 
@@ -213,7 +225,7 @@ Text: {text[:2000]}"""
             max_tokens=200,
             temperature=0.1
         )
-        
+
         institutions = []
         content = response.choices[0].message.content
         if content:
@@ -221,14 +233,14 @@ Text: {text[:2000]}"""
                 line = line.strip()
                 # Clean up formatting (remove bullets, dashes, numbers)
                 line = line.lstrip('- •*1234567890. ')
-                
+
                 if (line and 
                     ('university' in line.lower() or 'college' in line.lower() or 'institute' in line.lower()) and
                     not any(generic in line.lower() for generic in ['universities', 'colleges', 'institutions', 'higher education', 'all ', 'many ', 'some ', 'various'])):
                     institutions.append(line)
-        
+
         return institutions[:5]  # Return up to 5 specific institutions
-        
+
     except Exception as e:
         print(f"Error extracting institutions: {e}")
         return []
@@ -236,16 +248,16 @@ Text: {text[:2000]}"""
 def calculate_engagement_tier(opportunity_summary, sources_text):
     """Calculate engagement tier based on opportunity content and configurable rules"""
     # NOTE: Dynamic Campus should define its own tier classification rules before going to production.
-    
+
     combined_text = (opportunity_summary + " " + sources_text).lower()
-    
+
     # Count matches for each tier
     tier_scores = {}
     for tier, keywords in ENGAGEMENT_TIER_RULES.items():
         score = sum(1 for keyword in keywords if keyword.lower() in combined_text)
         if score > 0:
             tier_scores[tier] = score
-    
+
     # Return tier with highest score, default to Medium if no matches
     if tier_scores:
         best_tier = None
@@ -260,25 +272,25 @@ def calculate_engagement_tier(opportunity_summary, sources_text):
 def calculate_confidence_score(opportunity_summary, sources_text):
     """Calculate confidence score based on Dynamic Campus service keyword overlap"""
     # NOTE: These keywords represent Dynamic Campus services. This list must be reviewed and finalized before production use.
-    
+
     combined_text = (opportunity_summary + " " + sources_text).lower()
-    
+
     # Count keyword matches
     keyword_matches = sum(1 for keyword in DC_SERVICE_KEYWORDS if keyword.lower() in combined_text)
-    
+
     # Calculate base confidence (0.3 to 0.9 range)
     base_confidence = min(0.9, 0.3 + (keyword_matches * 0.1))
-    
+
     # Boost confidence if multiple sources mention similar themes
     if keyword_matches >= 3:
         base_confidence = min(0.95, base_confidence + 0.1)
-    
+
     return round(base_confidence, 2)
 
 def extract_potential_contacts(institution, sources):
     """Extract potential contacts from sources or generate likely contact types"""
     contacts = []
-    
+
     # Try to extract contacts from source content
     for source in sources[:3]:  # Check top 3 sources
         try:
@@ -308,7 +320,7 @@ def extract_potential_contacts(institution, sources):
                                         break
         except:
             continue
-    
+
     # If no specific contacts found, provide common higher ed IT roles
     if not contacts:
         common_roles = [
@@ -317,7 +329,7 @@ def extract_potential_contacts(institution, sources):
             {"name": "", "title": "Director of IT Services", "email": "", "source": f"{institution} IT department"}
         ]
         contacts.extend(common_roles[:2])  # Add top 2 common roles
-    
+
     # If still no contacts, add fallback message
     if not contacts:
         contacts.append({
@@ -326,7 +338,7 @@ def extract_potential_contacts(institution, sources):
             "email": "",
             "source": "Contact research needed"
         })
-    
+
     return contacts[:3]  # Return max 3 contacts
 
 def generate_signal_insight(articles_data):
@@ -334,16 +346,16 @@ def generate_signal_insight(articles_data):
     client = get_openai_client()
     if not client:
         return None
-    
+
     try:
         # Combine article data for trend analysis
         combined_text = ""
         sources = []
-        
+
         for article in articles_data:
             combined_text += f"Title: {article['title']}\nSummary: {article['summary']}\nSource: {article['source']}\n\n"
             sources.append({"title": article['title'], "url": article['url']})
-        
+
         prompt = f"""Analyze these higher education articles to identify emerging trends or sector-wide issues that could affect multiple institutions, even if no specific universities are named.
 
 Focus on trends like:
@@ -381,25 +393,25 @@ If no clear trend emerges, respond:
             max_tokens=400,
             temperature=0.3
         )
-        
+
         content = response.choices[0].message.content
         if not content:
             return None
-            
+
         try:
             result = json.loads(content)
         except json.JSONDecodeError:
             print("Error parsing Signal Insight response")
             return None
-        
+
         if result.get('signal_found') and result.get('confidence_score', 0) >= 0.4:
             # Create fallback suggested action
             suggested_action = ("Brief internal review: Does this signal align with existing Dynamic Campus services? "
                               "Could it affect existing clients or near-future opportunities?")
-            
+
             # Generate trend summary combining both fields
             trend_summary = f"{result['trend_summary']} {result.get('potential_impact', '')}"
-            
+
             fallback_lead = LeadOpportunity(
                 institution="❓ No specific institution identified",
                 opportunity_summary=trend_summary,
@@ -419,12 +431,12 @@ If no clear trend emerges, respond:
                 is_fallback=True,
                 suggested_action=suggested_action
             )
-            
+
             print(f"Generated Signal Insight fallback with confidence: {result['confidence_score']:.2f}")
             return fallback_lead
-        
+
         return None
-        
+
     except Exception as e:
         print(f"Error generating Signal Insight: {e}")
         return None
@@ -434,58 +446,58 @@ def analyze_lead_potential(articles_data):
     client = get_openai_client()
     if not client:
         return []
-    
+
     try:
         # First, extract all institutions mentioned across articles
         all_institutions = set()
         institution_articles = {}
-        
+
         for article in articles_data:
             article_text = f"{article['title']} {article['summary']}"
             institutions = extract_institutions_from_text(article_text)
-            
+
             for institution in institutions:
                 all_institutions.add(institution)
                 if institution not in institution_articles:
                     institution_articles[institution] = []
                 institution_articles[institution].append(article)
-        
+
         if not all_institutions:
             print("No specific institutions found in articles")
             return []
-        
+
         print(f"Found specific institutions: {list(all_institutions)}")
-        
+
         # Now analyze each institution for lead potential
         processed_leads = []
-        
+
         for institution in all_institutions:
             related_articles = institution_articles[institution]
-            
+
             # Combine article data for this institution
             combined_text = ""
             sources = []
-            
+
             for article in related_articles:
                 combined_text += f"Title: {article['title']}\nSummary: {article['summary']}\nSource: {article['source']}\n\n"
                 sources.append({"title": article['title'], "url": article['url']})
-            
+
             # Add additional context from other articles mentioning similar topics
             for article in articles_data:
                 if article not in related_articles:
                     article_text = f"{article['title']} {article['summary']}".lower()
                     institution_keywords = institution.lower().split()
-                    
+
                     # Check if article discusses similar topics that could be relevant
                     tech_keywords = ['technology', 'digital', 'ai', 'cybersecurity', 'erp', 'system', 'data']
                     if any(keyword in article_text for keyword in tech_keywords):
                         sources.append({"title": article['title'], "url": article['url']})
                         combined_text += f"Title: {article['title']}\nSummary: {article['summary'][:500]}\nSource: {article['source']}\n\n"
-            
+
             if len(sources) < 2:  # Need at least 2 sources for credibility
                 print(f"Insufficient sources for {institution}")
                 continue
-            
+
             prompt = f"""Analyze these articles to identify specific business opportunities for a digital transformation consultancy at {institution}.
 
 CRITICAL: Only identify opportunities if there is explicit evidence in the articles about {institution}. Do not make generic assumptions.
@@ -527,17 +539,17 @@ If no specific opportunity is evident for {institution}, respond:
                 max_tokens=500,
                 temperature=0.2
             )
-            
+
             analysis_content = analysis_response.choices[0].message.content
             if not analysis_content:
                 continue
-                
+
             try:
                 analysis_result = json.loads(analysis_content)
             except json.JSONDecodeError:
                 print(f"Error parsing analysis for {institution}")
                 continue
-            
+
             if analysis_result.get('lead_found') and analysis_result.get('confidence_score', 0) >= INSTITUTION_CONFIDENCE_THRESHOLD:
                 # Generate suggested action
                 action_prompt = f"""For this specific opportunity at {institution}, suggest a concrete strategic action for Dynamic Campus:
@@ -554,21 +566,21 @@ Provide a 1-2 sentence strategic recommendation."""
                     max_tokens=100,
                     temperature=0.4
                 )
-                
+
                 action_content = action_response.choices[0].message.content
                 if action_content:
                     suggested_action = action_content.strip()
                 else:
                     suggested_action = f"Contact {institution} leadership to discuss digital transformation opportunities."
-                
+
                 # Extract potential contacts for this institution
                 potential_contacts = extract_potential_contacts(institution, sources[:3])
-                
+
                 # Calculate engagement tier and confidence using new logic
                 sources_text = " ".join([s.get('title', '') + " " + s.get('summary', '') for s in sources[:3]])
                 calculated_tier = calculate_engagement_tier(analysis_result['opportunity_summary'], sources_text)
                 calculated_confidence = calculate_confidence_score(analysis_result['opportunity_summary'], sources_text)
-                
+
                 lead = LeadOpportunity(
                     institution=institution,
                     opportunity_summary=analysis_result['opportunity_summary'],
@@ -583,20 +595,20 @@ Provide a 1-2 sentence strategic recommendation."""
                     is_fallback=False,
                     suggested_action=suggested_action
                 )
-                
+
                 processed_leads.append(lead)
                 print(f"Generated lead for {institution}: {analysis_result['lead_type']}")
             else:
                 print(f"No qualified opportunity found for {institution}")
-        
+
         # If no institution-specific leads found, generate a Signal Insight fallback
         if not processed_leads:
             fallback_lead = generate_signal_insight(articles_data)
             if fallback_lead:
                 processed_leads.append(fallback_lead)
-        
+
         return processed_leads
-        
+
     except Exception as e:
         print(f"Error analyzing lead potential: {e}")
         return []
@@ -604,27 +616,27 @@ Provide a 1-2 sentence strategic recommendation."""
 def fetch_articles_for_lead_analysis():
     """Fetch articles from multiple sources for lead analysis"""
     print("=== Fetching Articles for Lead Analysis ===")
-    
+
     all_articles = []
-    
+
     for feed in HIGHER_ED_FEEDS:
         try:
             print(f"Fetching from {feed['name']}...")
-            
+
             # Fetch RSS feed
             response = requests.get(feed['url'], timeout=10)
             response.raise_for_status()
-            
+
             parsed_feed = feedparser.parse(response.content)
-            
+
             if not parsed_feed.entries:
                 print(f"No entries found in {feed['name']}")
                 continue
-            
+
             # Get recent articles (last 7 days)
             recent_articles = []
             cutoff_date = datetime.now() - timedelta(days=7)
-            
+
             for entry in parsed_feed.entries[:10]:  # Check last 10 articles
                 try:
                     # Parse publication date
@@ -632,33 +644,33 @@ def fetch_articles_for_lead_analysis():
                         pub_date = datetime(*entry.published_parsed[:6])
                     else:
                         continue  # Skip if no date
-                    
+
                     if pub_date > cutoff_date:
                         recent_articles.append(entry)
-                
+
                 except Exception as e:
                     print(f"Error processing entry date: {e}")
                     continue
-            
+
             # Process recent articles
             for entry in recent_articles[:3]:  # Limit per feed
                 try:
                     title = entry.title
                     url = entry.link
-                    
+
                     # Extract full content
                     downloaded = trafilatura.fetch_url(url)
                     if downloaded:
                         content = trafilatura.extract(downloaded)
                         if content and len(content) > 500:  # Minimum content length
-                            
+
                             # Check for tech relevance
                             content_lower = f"{title} {content}".lower()
                             tech_relevant = any(
                                 any(keyword.lower() in content_lower for keyword in keywords)
                                 for keywords in LEAD_KEYWORDS.values()
                             )
-                            
+
                             if tech_relevant or feed['focus'] == 'tech_specific':
                                 article_data = {
                                     'title': title,
@@ -669,63 +681,63 @@ def fetch_articles_for_lead_analysis():
                                 }
                                 all_articles.append(article_data)
                                 print(f"Added tech-relevant article: {title[:60]}...")
-                
+
                 except Exception as e:
                     print(f"Error processing article: {e}")
                     continue
-        
+
         except Exception as e:
             print(f"Error fetching from {feed['name']}: {e}")
             continue
-    
+
     print(f"Collected {len(all_articles)} tech-relevant articles for analysis")
     return all_articles
 
 def identify_new_leads():
     """Main function to identify new leads"""
     print("=== Higher Ed Lead Generation Analysis ===")
-    
+
     # Load existing data
     existing_leads = load_leads_database()
     current_clients = load_clients_database()
-    
+
     # Fetch and analyze articles
     articles = fetch_articles_for_lead_analysis()
-    
+
     if len(articles) < 3:
         print("Insufficient articles for triangulated analysis")
         return None
-    
+
     # Analyze for lead potential
     potential_leads = analyze_lead_potential(articles)
-    
+
     if not potential_leads:
         print("No qualified leads identified")
         return None
-    
+
     # Filter and validate leads
     qualified_leads = []
-    
+
     for lead in potential_leads:
         # Check if already a client
         if is_current_client(lead.institution, current_clients):
             print(f"Skipping {lead.institution} - current client")
             continue
-        
+
         # Check for recent duplicates
         if is_duplicate_lead(lead.institution, lead.lead_type, existing_leads):
             print(f"Skipping {lead.institution} - recent duplicate")
             continue
-        
+
         qualified_leads.append(lead)
-    
+
     if not qualified_leads:
         print("No new qualified leads after filtering")
         return None
-    
+
     # Select highest confidence lead
     best_lead = max(qualified_leads, key=lambda x: x.confidence_score)
-    
+
     # Add to database
     lead_dict = {
         'institution': best_lead.institution,
@@ -740,29 +752,29 @@ def identify_new_leads():
         'lead_id': best_lead.lead_id,
         'is_fallback': best_lead.is_fallback
     }
-    
+
     existing_leads.append(lead_dict)
     save_leads_database(existing_leads)
-    
+
     print(f"Identified new lead: {best_lead.institution} - {best_lead.lead_type}")
     return best_lead
 
 def format_email_body(lead):
     """Format lead data into clean HTML email body"""
     current_date = datetime.now().strftime("%A, %B %d, %Y")
-    
+
     # Escape AI-generated content to prevent HTML injection
     institution = html.escape(lead.institution)
     opportunity_summary = html.escape(lead.opportunity_summary).replace('\n', '<br>')
     notes = html.escape(lead.notes).replace('\n', '<br>')
-    
+
     # Format sources as HTML links
     sources_html = ""
     for source in lead.sources[:3]:
         title = html.escape(source['title'][:60] + "..." if len(source['title']) > 60 else source['title'])
         url = html.escape(source['url'])
         sources_html += f"&bull; <a href='{url}'>{title}</a><br>"
-    
+
     # Format potential contacts
     contacts_html = ""
     for contact in lead.potential_contacts[:3]:
@@ -770,7 +782,7 @@ def format_email_body(lead):
         title = html.escape(contact.get('title', 'N/A'))
         email = html.escape(contact.get('email', ''))
         source = html.escape(contact.get('source', ''))
-        
+
         if name and name != "N/A" and name != "No direct contacts found":
             contacts_html += f"&bull; <strong>{name}</strong> - {title}"
             if email:
@@ -778,7 +790,7 @@ def format_email_body(lead):
             contacts_html += f"<br><em>Source: {source}</em><br><br>"
         else:
             contacts_html += f"&bull; {title}<br><em>{source}</em><br><br>"
-    
+
     if lead.is_fallback:
         # Signal Insight fallback format
         body = f"""<html>
@@ -815,7 +827,7 @@ Lead ID: {lead.lead_id}
     else:
         # Standard institution-specific lead format
         engagement_desc = html.escape(ENGAGEMENT_TIERS.get(lead.engagement_tier, 'Custom engagement'))
-        
+
         body = f"""<html>
 <body style='font-family: Arial, sans-serif; line-height: 1.6; color: #333;'>
 <h2 style='color: #2c3e50;'>🧠 New Lead Identified</h2>
@@ -847,7 +859,7 @@ Lead ID: {lead.lead_id}
 </p>
 </body>
 </html>"""
-    
+
     return body
 
 def create_lead_email(lead):
@@ -856,44 +868,45 @@ def create_lead_email(lead):
         subject = f"📡 Signal Insight: {lead.lead_type} | Sector Trend Analysis"
     else:
         subject = f"🧠 New Lead Identified: {lead.institution} | {lead.lead_type} | {lead.engagement_tier}"
-    
+
     html_body = format_email_body(lead)
-    
+
     return subject, html_body
 
 def send_lead_email(lead):
     """Send lead email to team with HTML formatting"""
     try:
         # Load credentials
-        gmail_address = os.environ.get('GMAIL_ADDRESS')
-        app_password = os.environ.get('GMAIL_APP_PASSWORD')
-        
+        config = load_config()
+        gmail_address = config.get('gmail_address') or os.environ.get('GMAIL_ADDRESS')
+        app_password = config.get('gmail_app_password') or os.environ.get('GMAIL_APP_PASSWORD')
+
         if not gmail_address or not app_password:
             print("Gmail credentials not found")
             return False
-        
+
         # Create email with HTML formatting
         subject, html_body = create_lead_email(lead)
-        
+
         # Create multipart message
         msg = MIMEMultipart('alternative')
         msg['Subject'] = subject
         msg['From'] = gmail_address
-        msg['To'] = 'shayne.mcgregor@dynamiccampus.com'
-        msg['Cc'] = 'smcgregor@maryu.marywood.edu'
-        
+        msg['To'] = 'shayne.mcgregor@dynamiccampus.com' #TODO: change this to config
+        msg['Cc'] = 'smcgregor@maryu.marywood.edu' #TODO: change this to config
+
         # Attach HTML content
         html_part = MIMEText(html_body, 'html')
         msg.attach(html_part)
-        
+
         # Send email
         with smtplib.SMTP_SSL('smtp.gmail.com', 465) as server:
             server.login(gmail_address, app_password)
             server.send_message(msg)
-        
+
         print(f"✅ Lead email sent: {lead.institution}")
         return True
-        
+
     except Exception as e:
         print(f"Error sending lead email: {e}")
         return False
@@ -901,9 +914,9 @@ def send_lead_email(lead):
 def test_lead_generation():
     """Test the lead generation system"""
     print("Testing Higher Ed Lead Generation System...")
-    
+
     lead = identify_new_leads()
-    
+
     if lead:
         print(f"\nGenerated Lead:")
         print(f"Institution: {lead.institution}")
@@ -911,13 +924,13 @@ def test_lead_generation():
         print(f"Tier: {lead.engagement_tier}")
         print(f"Confidence: {lead.confidence_score:.2f}")
         print(f"Summary: {lead.opportunity_summary}")
-        
+
         # Show email preview
         subject, body = create_lead_email(lead)
         print(f"\nEmail Preview:")
         print(f"Subject: {subject}")
         print(f"Body: {body[:300]}...")
-        
+
         return lead
     else:
         print("No leads identified in current cycle")
@@ -926,20 +939,23 @@ def test_lead_generation():
 def run_daily_lead_generation():
     """Run daily lead generation at 7 AM"""
     print("=== Daily Lead Generation Execution ===")
-    
+
+    # Load config
+    config = load_config()
+
     # Load credentials
-    gmail_address = os.environ.get('GMAIL_ADDRESS')
-    app_password = os.environ.get('GMAIL_APP_PASSWORD')
-    
+    gmail_address = config.get('gmail_address') or os.environ.get('GMAIL_ADDRESS')
+    app_password = config.get('gmail_app_password') or os.environ.get('GMAIL_APP_PASSWORD')
+
     if not gmail_address or not app_password:
         print("❌ Gmail credentials not found")
         return
-    
+
     print(f"✅ Credentials loaded for: {gmail_address}")
-    
+
     # Generate lead
     lead = identify_new_leads()
-    
+
     if lead:
         # Send lead email
         success = send_lead_email(lead)
@@ -953,22 +969,23 @@ def run_daily_lead_generation():
 def run_scheduler():
     """Run the lead generation scheduler"""
     print("=== Higher Ed Lead Generation Scheduler ===")
-    
+
     # Test credentials first
-    gmail_address = os.environ.get('GMAIL_ADDRESS')
+    config = load_config()
+    gmail_address = config.get('gmail_address') or os.environ.get('GMAIL_ADDRESS')
     if not gmail_address:
         print("❌ Gmail credentials not configured")
         return
-    
+
     print(f"Service started at: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
     print("Testing credentials...")
     print(f"✅ Credentials validated for: {gmail_address}")
     print("📅 Lead generation scheduled for 7:00 AM Eastern Time daily")
     print("🔄 Scheduler is now running... (Press Ctrl+C to stop)")
-    
+
     # Schedule daily execution
     schedule.every().day.at("07:00").do(run_daily_lead_generation)
-    
+
     # Keep running
     while True:
         schedule.run_pending()
@@ -979,9 +996,9 @@ def main():
     parser = argparse.ArgumentParser(description='Higher Ed Lead Generation System')
     parser.add_argument('--mode', choices=['immediate', 'schedule', 'test'], 
                        default='immediate', help='Execution mode')
-    
+
     args = parser.parse_args()
-    
+
     if args.mode == 'test':
         test_lead_generation()
     elif args.mode == 'immediate':

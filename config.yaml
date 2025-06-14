@@ -1,0 +1,74 @@
+
+# Configuration for the Higher Ed Lead Generation System
+
+# Email settings for sending lead notifications
+email_recipients:
+  to: 'shayne.mcgregor@dynamiccampus.com'
+  cc:
+    - 'smcgregor@maryu.marywood.edu'
+    - 'jasmine.n.olivier@gmail.com'
+
+# Rules for classifying the potential size of an engagement
+engagement_tier_rules:
+  Small:
+    - "LMS update"
+    - "one-time website rebuild"
+    - "small upgrade"
+    - "single system"
+    - "pilot project"
+  Medium:
+    - "ERP implementation"
+    - "AI governance"
+    - "cloud migration"
+    - "cybersecurity assessment"
+    - "data governance"
+  Recurring:
+    - "institutional research modernization"
+    - "security audits"
+    - "CRM lifecycle tracking"
+    - "ongoing support"
+    - "managed services"
+  Full Outsourcing:
+    - "entire IT department management"
+    - "complete infrastructure overhaul"
+    - "full digital transformation"
+
+# Keywords that map to our core services to help calculate lead confidence
+dc_service_keywords:
+  - "ERP"
+  - "AI governance"
+  - "cybersecurity"
+  - "data governance"
+  - "LMS"
+  - "CRM"
+  - "institutional research"
+  - "cloud migration"
+  - "digital transformation"
+  - "IT infrastructure"
+  - "security audit"
+  - "compliance"
+  - "analytics"
+  - "business intelligence"
+  - "student information system"
+  - "enrollment management"
+
+# RSS feeds to monitor for potential leads
+higher_ed_feeds:
+  - name: 'Inside Higher Ed'
+    url: 'https://www.insidehighered.com/rss.xml'
+    focus: 'general_higher_ed'
+  - name: 'EdTech Magazine Higher Ed'
+    url: 'https://edtechmagazine.com/higher/rss.xml'
+    focus: 'tech_specific'
+  - name: 'Higher Ed Dive'
+    url: 'https://www.highereddive.com/feeds/news/'
+    focus: 'general_higher_ed'
+  - name: 'Faculty Focus'
+    url: 'https://www.facultyfocus.com/feed/'
+    focus: 'general education from perspective of educucators'
+  - name: 'Higher Ed Jobs'
+    url: 'https://www.higheredjobs.com/rss/articleFeed.cfm'
+    focus: 'higher education with a focus on jobs'
+  - name: 'Higher Education Today'
+    url: 'https://www.higheredtoday.org/feed/'
+    focus: 'general higher education'
