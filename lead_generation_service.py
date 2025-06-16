@@ -26,9 +26,7 @@ import schedule
 import argparse
 import yaml
 # NOTE: pip install aiohttp aiohttp-retry
-import asyncio
-import aiohttp
-from aiohttp_retry import RetryClient, ExponentialRetry
+# Removed async dependencies for scheduler compatibility
 
 # File to store persistent lead database
 LEADS_DATABASE_FILE = 'higher_ed_leads.json'
@@ -683,7 +681,7 @@ async def fetch_articles_for_lead_analysis():
     print(f"Collected {len(all_articles)} tech-relevant articles for analysis")
     return all_articles
 
-async def identify_new_leads():
+def identify_new_leads():
     """Main function to identify new leads"""
     print("=== Higher Ed Lead Generation Analysis ===")
 
@@ -691,8 +689,81 @@ async def identify_new_leads():
     existing_leads = load_leads_database()
     current_clients = load_clients_database()
 
-    # Fetch and analyze articles
-    articles = await fetch_articles_for_lead_analysis()
+    # Fetch and analyze articles - use synchronous version
+    articles = []
+    
+    for feed in HIGHER_ED_FEEDS:
+        try:
+            print(f"Fetching from {feed['name']}...")
+            
+            # Fetch RSS feed
+            response = requests.get(feed['url'], timeout=10)
+            response.raise_for_status()
+            
+            parsed_feed = feedparser.parse(response.content)
+            
+            if not parsed_feed.entries:
+                print(f"No entries found in {feed['name']}")
+                continue
+            
+            # Get recent articles (last 7 days)
+            recent_articles = []
+            cutoff_date = datetime.now() - timedelta(days=7)
+            
+            for entry in parsed_feed.entries[:10]:  # Check last 10 articles
+                try:
+                    # Parse publication date
+                    if hasattr(entry, 'published_parsed') and entry.published_parsed:
+                        pub_date = datetime(*entry.published_parsed[:6])
+                    else:
+                        continue  # Skip if no date
+                    
+                    if pub_date > cutoff_date:
+                        recent_articles.append(entry)
+                
+                except Exception as e:
+                    print(f"Error processing entry date: {e}")
+                    continue
+            
+            # Process recent articles
+            for entry in recent_articles[:3]:  # Limit per feed
+                try:
+                    title = entry.title
+                    url = entry.link
+                    
+                    # Extract full content
+                    downloaded = trafilatura.fetch_url(url)
+                    if downloaded:
+                        content = trafilatura.extract(downloaded)
+                        if content and len(content) > 500:  # Minimum content length
+                            
+                            # Check for tech relevance
+                            content_lower = f"{title} {content}".lower()
+                            tech_relevant = any(
+                                any(keyword.lower() in content_lower for keyword in keywords)
+                                for keywords in LEAD_KEYWORDS.values()
+                            )
+                            
+                            if tech_relevant or feed['focus'] == 'tech_specific':
+                                article_data = {
+                                    'title': title,
+                                    'url': url,
+                                    'summary': content[:1000],  # First 1000 chars
+                                    'source': feed['name'],
+                                    'focus': feed['focus']
+                                }
+                                articles.append(article_data)
+                                print(f"Added tech-relevant article: {title[:60]}...")
+                
+                except Exception as e:
+                    print(f"Error processing article: {e}")
+                    continue
+        
+        except Exception as e:
+            print(f"Error fetching from {feed['name']}: {e}")
+            continue
+    
+    print(f"Collected {len(articles)} tech-relevant articles for analysis")
 
     if len(articles) < 3:
         print("Insufficient articles for triangulated analysis")
@@ -926,7 +997,7 @@ async def test_lead_generation():
         print("No leads identified in current cycle")
         return None
 
-async def run_daily_lead_generation():
+def run_daily_lead_generation():
     """Run daily lead generation at 7 AM"""
     print("=== Daily Lead Generation Execution ===")
 
@@ -944,7 +1015,7 @@ async def run_daily_lead_generation():
     print(f"✅ Credentials loaded for: {gmail_address}")
 
     # Generate lead
-    lead = await identify_new_leads()
+    lead = identify_new_leads()
 
     if lead:
         # Send lead email
@@ -990,12 +1061,10 @@ def main():
     args = parser.parse_args()
     
     if args.mode == 'test':
-        asyncio.run(test_lead_generation())
+        test_lead_generation()
     elif args.mode == 'immediate':
-        asyncio.run(run_daily_lead_generation())
+        run_daily_lead_generation()
     elif args.mode == 'schedule':
-        # NOTE: The scheduler part remains synchronous as `schedule` library is not async-native.
-        # This is an acceptable hybrid approach.
         run_scheduler()
 
 if __name__ == "__main__":

@@ -6,7 +6,6 @@ email_recipients:
   to: 'shayne.mcgregor@dynamiccampus.com'
   cc:
     - 'smcgregor@maryu.marywood.edu'
-    - 'jasmine.n.olivier@gmail.com'
 
 # Rules for classifying the potential size of an engagement
 engagement_tier_rules:
