@@ -953,8 +953,8 @@ def send_lead_email(lead):
         msg = MIMEMultipart('alternative')
         msg['Subject'] = subject
         msg['From'] = gmail_address
-        msg['To'] = 'shayne.mcgregor@dynamiccampus.com' #TODO: change this to config
-        msg['Cc'] = 'smcgregor@maryu.marywood.edu' #TODO: change this to config
+        msg['To'] = 'shayne.mcgregor@dynamiccampus.com'
+        msg['Cc'] = 'smcgregor@maryu.marywood.edu'
 
         # Attach HTML content
         html_part = MIMEText(html_body, 'html')
