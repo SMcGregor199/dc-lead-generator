@@ -129,5 +129,46 @@
     "notes": "Institution-specific analysis from 3 sources. Calculated confidence: 0.40",
     "lead_id": "8a734474d4d2",
     "is_fallback": false
+  },
+  {
+    "institution": "❓ No specific institution identified",
+    "opportunity_summary": "The articles highlight a growing trend of regulatory and policy changes affecting higher education, particularly concerning accountability for student outcomes and tuition policies for noncitizens. The Senate's proposal to tie federal loan access to student earnings and the DOJ's actions against in-state tuition for undocumented students indicate a shift towards stricter oversight and potential financial implications for institutions. These regulatory changes could lead to increased financial pressures on institutions to ensure student success post-graduation and compliance with federal policies. Universities may need to invest in data analytics and student support services to improve outcomes and navigate the evolving legal landscape.",
+    "engagement_tier": "Exploratory",
+    "potential_contacts": [
+      {
+        "name": "No direct contacts found",
+        "title": "Sector-wide trend - no specific institution contacts",
+        "email": "",
+        "source": "Signal insight analysis"
+      }
+    ],
+    "sources": [
+      {
+        "title": "How Senate Republicans Want to Hold Colleges Accountable",
+        "url": "https://www.insidehighered.com/news/government/student-aid-policy/2025/06/20/how-senate-republicans-want-hold-colleges-accountable"
+      },
+      {
+        "title": "DOJ Targets In-State Tuition for Noncitizens in Kentucky as Texas Students Fight Back",
+        "url": "https://www.insidehighered.com/news/government/politics-elections/2025/06/20/after-texas-doj-targets-kentuckys-state-tuition"
+      },
+      {
+        "title": "3 Types of Wireless Site Surveys and How To Conduct Them",
+        "url": "https://edtechmagazine.com/higher/types-of-wireless-site-surveys-how-to-conduct-them-perfcon"
+      },
+      {
+        "title": "A Guide to the ADA Title II Accessibility Rule",
+        "url": "https://edtechmagazine.com/higher/article/2025/06/guide-ada-title-ii-accessibility-rule-perfcon"
+      },
+      {
+        "title": "Q&A: Meeting the Demands of High-Performance Research Computing in Higher Ed",
+        "url": "https://edtechmagazine.com/higher/article/2025/06/qa-meeting-demands-high-performance-research-computing-higher-ed"
+      }
+    ],
+    "date_identified": "06/20/2025",
+    "confidence_score": 0.7,
+    "lead_type": "Signal",
+    "notes": "This is a fallback signal with no identified institution. Confidence: 0.70",
+    "lead_id": "355a154299e3",
+    "is_fallback": true
   }
 ]
